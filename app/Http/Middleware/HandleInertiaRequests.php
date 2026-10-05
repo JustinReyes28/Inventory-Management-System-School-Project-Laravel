@@ -32,7 +32,7 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        return [
+        return array_merge(parent::share($request), [
             'auth' => [
                 'user' => fn () => $this->authenticatedUser($request->user()),
                 // Spatie roles/permissions drive conditional React rendering.
@@ -72,25 +72,13 @@ class HandleInertiaRequests extends Middleware
             // Fortify flashes 'status' after login-adjacent actions (password
             // reset link sent, profile updated, password updated).
             'status' => fn () => $request->session()->get('status'),
-            'errors' => function () use ($request): array {
-                // Named validation bags (Fortify profile/password forms) are
-                // selected by Inertia's X-Inertia-Error-Bag header.
-                $bag = $request->header('X-Inertia-Error-Bag') ?: 'default';
-                $errors = $request->session()->get('errors')?->getBag($bag)->getMessages() ?? [];
-
-                if ($request->routeIs('login') && isset($errors['username'])) {
-                    $errors['email'] ??= $errors['username'];
-                }
-
-                return $errors;
-            },
             'old' => function () use ($request): array {
                 $old = $request->session()->getOldInput();
                 unset($old['_token'], $old['password'], $old['password_confirmation']);
 
                 return $old;
             },
-        ];
+        ]);
     }
 
     /**

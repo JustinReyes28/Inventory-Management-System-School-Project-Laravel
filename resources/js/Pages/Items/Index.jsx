@@ -159,7 +159,7 @@ export default function ItemsIndex({ items, categories = [], filters = {}, error
                                         <td>
                                             <div className="flex justify-end gap-1 no-print">
                                                 {can('update items') && <button type="button" className="icon-button" onClick={() => openEdit(item)} aria-label={`Edit ${item.name || 'item'}`} title="Edit item"><Icon name="edit" size={18} /></button>}
-                                                {can('update items') && !archived && <button type="button" className="icon-button hover:!bg-amber-50 hover:!text-amber-800" onClick={() => setArchiveTarget(item)} aria-label={`Archive ${item.name || 'item'}`} title="Archive item"><Icon name="archive" size={18} /></button>}
+                                                {can('delete items') && !archived && <button type="button" className="icon-button hover:!bg-amber-50 hover:!text-amber-800" onClick={() => setArchiveTarget(item)} aria-label={`Archive ${item.name || 'item'}`} title="Archive item"><Icon name="archive" size={18} /></button>}
                                             </div>
                                         </td>
                                     </tr>

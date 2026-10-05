@@ -3,6 +3,7 @@ import Icon from '../Components/Icons';
 import { ActionBadge, Card, CardHeader, EmptyState, ErrorState, ExpiryBadge, MetricCard, Notice, PageHeader, StockBadge } from '../Components/UI';
 import { asArray, firstDefined, formatCurrency, formatDate, formatNumber, numberValue, relationName, timeAgo, titleCase } from '../Utils';
 import { paths } from '../Utils/routes';
+import useAuth from '../Utils/auth';
 
 function CategoryStockChart({ chart, categoryStock }) {
     const source = chart || categoryStock || {};
@@ -41,6 +42,8 @@ function CategoryStockChart({ chart, categoryStock }) {
 }
 
 export default function Dashboard({ metrics = {}, chart, categoryStock, recentActivity, recent_activity: legacyActivity, expiringBatches, expiring_batches: legacyBatches, error }) {
+    const { can } = useAuth();
+    const canViewActivity = can('view activity logs');
     const { props } = usePage();
     const pageError = error || props.error;
     const activityRows = asArray(recentActivity || legacyActivity);
@@ -79,13 +82,13 @@ export default function Dashboard({ metrics = {}, chart, categoryStock, recentAc
                 <MetricCard label="Expiring soon" value={formatNumber(values.nearExpiry)} hint="Requires an expiry decision" icon="clock" tone="red" />
             </section>
 
-            <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(20rem,0.75fr)]">
+            <div className={`mt-5 grid gap-5 ${canViewActivity ? 'xl:grid-cols-[minmax(0,1.25fr)_minmax(20rem,0.75fr)]' : ''}`}>
                 <Card>
                     <CardHeader title="Stock by category" description="Current on-hand quantity, sorted from largest to smallest." actions={<Link href={paths.items} className="text-sm font-semibold text-teal-700 hover:text-teal-900">View items</Link>} />
                     <div className="p-4 sm:p-5"><CategoryStockChart chart={chart} categoryStock={categoryStock} /></div>
                 </Card>
 
-                <Card>
+                {canViewActivity && <Card>
                     <CardHeader title="Recent activity" description="The latest inventory changes." actions={<Link href={paths.activityLogs} className="text-sm font-semibold text-teal-700 hover:text-teal-900">View log</Link>} />
                     {activityRows.length ? (
                         <ul className="divide-y divide-slate-100">
@@ -112,7 +115,7 @@ export default function Dashboard({ metrics = {}, chart, categoryStock, recentAc
                             })}
                         </ul>
                     ) : <EmptyState compact icon="history" title="No recent activity" description="Inventory changes will appear here as the team works." />}
-                </Card>
+                </Card>}
             </div>
 
             <Card className="mt-5 overflow-hidden">

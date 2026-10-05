@@ -24,7 +24,7 @@ class DashboardService
      *     recent_activity: EloquentCollection<int, ActivityLog>
      * }
      */
-    public function data(): array
+    public function data(bool $includeActivity = false): array
     {
         $totalProducts = Item::query()->count();
         $totalInventoryValue = round((float) Item::query()
@@ -59,7 +59,7 @@ class DashboardService
             ->limit(5)
             ->get();
 
-        $recentActivity = ActivityLog::query()
+        $recentActivity = $includeActivity ? ActivityLog::query()
             ->with([
                 'user:id,full_name',
                 'item:id,sku,name',
@@ -67,7 +67,7 @@ class DashboardService
             ->latest('created_at')
             ->latest('id')
             ->limit(10)
-            ->get();
+            ->get() : new EloquentCollection;
 
         return [
             'total_products' => $totalProducts,

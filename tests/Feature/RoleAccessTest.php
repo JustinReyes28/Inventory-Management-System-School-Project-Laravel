@@ -143,6 +143,33 @@ class RoleAccessTest extends InventoryTestCase
         }
     }
 
+    public function test_update_permission_cannot_archive_items_through_either_endpoint(): void
+    {
+        $editor = $this->createUser('user', 'limited.editor');
+        $editor->givePermissionTo('update items');
+        $itemId = $this->createItem();
+
+        $this->assertFalse($editor->can('delete items'));
+        $this->actingAs($editor)->delete('/items/'.$itemId)->assertForbidden();
+        $this->patch('/items/'.$itemId.'/archive')->assertForbidden();
+        $this->assertDatabaseHas('items', ['id' => $itemId, 'is_deleted' => false]);
+    }
+
+    public function test_delete_permission_allows_both_archive_endpoints_without_update_permission(): void
+    {
+        $archiver = $this->createUser('user', 'limited.archiver');
+        $archiver->givePermissionTo('delete items');
+        $categoryId = $this->createCategory();
+        $first = $this->createItem($categoryId, 'ARCHIVE-DELETE');
+        $second = $this->createItem($categoryId, 'ARCHIVE-PATCH');
+
+        $this->assertFalse($archiver->can('update items'));
+        $this->actingAs($archiver)->delete('/items/'.$first)->assertRedirect('/items');
+        $this->patch('/items/'.$second.'/archive')->assertRedirect('/items');
+        $this->assertDatabaseHas('items', ['id' => $first, 'is_deleted' => true]);
+        $this->assertDatabaseHas('items', ['id' => $second, 'is_deleted' => true]);
+    }
+
     public function test_web_group_runs_the_csrf_middleware(): void
     {
         // Ordinary feature tests bypass CSRF; this asserts the protection is

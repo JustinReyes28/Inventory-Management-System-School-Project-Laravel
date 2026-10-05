@@ -6,6 +6,26 @@ use Inertia\Testing\AssertableInertia;
 
 class ReportDashboardTest extends InventoryTestCase
 {
+    public function test_dashboard_activity_requires_the_activity_log_permission(): void
+    {
+        $actor = $this->createUser('admin', 'restricted.actor');
+        $viewer = $this->createUser('user', 'restricted.viewer');
+        $logId = $this->createActivityLog($actor->id, description: 'Restricted activity record.');
+
+        $this->actingAs($viewer)->get('/activity-logs')->assertForbidden();
+        $response = $this->get('/dashboard')->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('Dashboard')
+            ->missing('recent_activity')
+        );
+        $this->assertStringNotContainsString('Restricted activity record.', $response->getContent());
+
+        $viewer->givePermissionTo('view activity logs');
+        $this->get('/dashboard')->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('recent_activity', 1)
+            ->where('recent_activity.0.id', $logId)
+        );
+    }
+
     public function test_dashboard_contains_active_stock_expiry_and_recent_activity_data(): void
     {
         $user = $this->createUser('employee', 'dashboard.metrics');

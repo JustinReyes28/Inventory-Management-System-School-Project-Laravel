@@ -41,12 +41,12 @@ export function firstDefined(...values) {
 }
 
 export function numberValue(...values) {
-    const value = Number(firstDefined(values, 0));
+    const value = Number(firstDefined(...values, 0));
     return Number.isFinite(value) ? value : 0;
 }
 
 export function stringValue(...values) {
-    const value = firstDefined(values, '');
+    const value = firstDefined(...values, '');
     return value === null || value === undefined ? '' : String(value);
 }
 

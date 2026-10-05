@@ -3,7 +3,11 @@
 namespace Tests\Feature;
 
 use App\Enums\RoleName;
+use App\Http\Middleware\HandleInertiaRequests;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\MessageBag;
+use Illuminate\Support\ViewErrorBag;
 use Inertia\Testing\AssertableInertia;
 
 /**
@@ -12,6 +16,48 @@ use Inertia\Testing\AssertableInertia;
  */
 class AccountManagementTest extends InventoryTestCase
 {
+    public function test_profile_errors_reach_inertia_in_the_named_form_bag(): void
+    {
+        $user = $this->createUser('employee', 'profile.errors');
+        $errors = (new ViewErrorBag)->put('updateProfileInformation', new MessageBag([
+            'full_name' => ['The full name field is required.'],
+        ]));
+
+        $this->actingAs($user)->withSession(['errors' => $errors]);
+        $session = $this->app['session']->driver();
+        $session->save();
+
+        $this->withCookie($session->getName(), $session->getId())
+            ->get('/account', ['X-Inertia-Error-Bag' => 'updateProfileInformation'])
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('errors.updateProfileInformation.full_name', 'The full name field is required.')
+                ->missing('errors.full_name')
+            );
+    }
+
+    public function test_password_errors_are_preserved_on_partial_inertia_responses(): void
+    {
+        $user = $this->createUser('employee', 'password.errors');
+        $errors = (new ViewErrorBag)->put('updatePassword', new MessageBag([
+            'current_password' => ['The provided password does not match your current password.'],
+        ]));
+        $version = app(HandleInertiaRequests::class)->version(Request::create('/account'));
+
+        $this->actingAs($user)->withSession(['errors' => $errors]);
+        $session = $this->app['session']->driver();
+        $session->save();
+
+        $this->withCookie($session->getName(), $session->getId())->get('/account', [
+            'X-Inertia' => 'true',
+            'X-Inertia-Version' => $version ?? '',
+            'X-Inertia-Error-Bag' => 'updatePassword',
+            'X-Inertia-Partial-Component' => 'Account',
+            'X-Inertia-Partial-Data' => 'auth',
+        ])->assertSuccessful()
+            ->assertJsonPath('props.errors.updatePassword.current_password', 'The provided password does not match your current password.')
+            ->assertJsonMissingPath('props.errors.current_password');
+    }
+
     public function test_the_account_page_updates_profile_information_and_email(): void
     {
         $user = $this->createUser('employee', 'account.user');

@@ -1,5 +1,50 @@
 # Verification Record
 
+## Review corrections verified on 2026-10-05
+
+The independent review found five defects missed by the initial checks below.
+All five are now corrected:
+
+| Finding | Correction and regression evidence |
+| --- | --- |
+| MySQL could not drop the legacy role index while its foreign key depended on it | Drop the foreign key before its index and column. Fresh setup and a populated legacy upgrade both pass on an isolated MySQL 8.0.44 instance. |
+| Rerunning the seeder promoted a publicly registered account using `ADMIN_USERNAME` | Refuse existing non-admin accounts. Tests cover registration after an administrator renames their account, unchanged user attributes/roles, fresh provisioning, and repeated seeding of a legitimate Admin. |
+| Account validation errors were flattened and invisible in React forms | Restore Inertia's standard shared errors, preserving named bags and errors during partial responses. Both profile and password response shapes have regression tests. |
+| The PATCH archive endpoint accepted update permission while DELETE required delete permission | Both endpoints and the archive button require `delete items`. Direct-request tests verify update-only rejection and delete-only success for both endpoints. |
+| The dashboard disclosed activity logs without `view activity logs` | Only query and share activity when authorized, and conditionally render the activity card/link. Tests verify the prop is absent without permission and present after an explicit grant. |
+
+Browser verification also found a shared fallback helper passing an entire
+array into `firstDefined`. This displayed valid quantities and dashboard
+totals as zero. Numeric and text helpers now spread their fallback arguments;
+four Node tests cover available fields, zero, negative values, invalid numbers,
+and text defaults.
+
+Current verification results:
+
+- `php artisan test --compact`: **48 passed, 466 assertions**.
+- `npm run test:unit`: **4 passed** (Node's built-in test runner).
+- `npm run build`: **PASS**, 661 modules transformed.
+- Active Laravel code Pint check: **PASS**.
+- MySQL fresh migrations/full seeding/repeated seeding: **PASS** in a disposable
+  database on port 33079. The test server was shut down and removed afterwards.
+- MySQL upgrade from the original migrations with populated users, role IDs,
+  categories and items: **PASS**. User IDs, names, passwords, creation dates,
+  role assignments and stock were preserved. Reseeding also preserved the
+  migrated administrator's profile and password.
+- In-app Chromium with an isolated SQLite database and production assets:
+  profile field errors appear, corrected input saves, activity appears for
+  Employees and is absent for users without permission, update-only accounts
+  see Edit without Archive, and delete-only accounts see Archive without Edit.
+  The fixture displays 8 units, reorder threshold 2, 1 product and $80 stock
+  value. No warning/error console messages were captured in these flows.
+
+Screenshots: [account validation](screenshots/account-validation-review.jpg)
+and [restricted dashboard with correct totals](screenshots/dashboard-permissions-review.jpg).
+The earlier verification record below describes the original conversion;
+its 22 browser checks are historical results, not a rerun of that script.
+
+## Original conversion verification
+
 Recorded: 2026-10-05. Covers Phase 5 of the final-project plan: security,
 functionality, migration, build, formatting, and browser checks.
 

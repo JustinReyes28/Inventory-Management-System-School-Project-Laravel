@@ -33,7 +33,7 @@ Route::name('items.')->group(function (): void {
         ->name('update');
 
     Route::patch('/items/{item}/archive', [ItemController::class, 'archive'])
-        ->middleware('permission:update items')
+        ->middleware('permission:delete items')
         ->name('archive');
 
     Route::delete('/items/{item}', [ItemController::class, 'destroy'])

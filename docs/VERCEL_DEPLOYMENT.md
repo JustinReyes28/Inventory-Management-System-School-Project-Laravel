@@ -20,6 +20,12 @@ This repository uses Laravel 13 for routing, authentication, and database access
 
    The seeder rejects a missing `ADMIN_PASSWORD` when `APP_ENV=production`. Do not use the local development password for a public deployment. Do not run migrations or seeders in Vercel's build command; preview and production builds could then change the same database.
 
+   Existing accounts are reused only if they already hold the Admin role;
+   their profile and password are preserved. If `ADMIN_USERNAME` belongs to
+   a non-admin account, seeding aborts without changing it. When the original
+   administrator has renamed their account, set `ADMIN_USERNAME` to their
+   current username before rerunning the seeder.
+
 ## Schema and mail configuration after the Fortify/Spatie conversion
 
 The schema now also contains Spatie's `permissions`, `model_has_roles`,

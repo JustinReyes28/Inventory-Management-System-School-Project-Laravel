@@ -7,6 +7,7 @@ use App\Http\Resources\BatchResource;
 use App\Models\ActivityLog;
 use App\Models\Batch;
 use App\Services\DashboardService;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -14,12 +15,13 @@ class DashboardController extends Controller
 {
     public function __construct(private readonly DashboardService $dashboard) {}
 
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        $data = $this->dashboard->data();
+        $canViewActivity = $request->user()->can('view activity logs');
+        $data = $this->dashboard->data(includeActivity: $canViewActivity);
         $categories = $data['stock_by_category'];
 
-        return Inertia::render('Dashboard', [
+        $props = [
             'metrics' => [
                 'total_products' => (int) $data['total_products'],
                 'total_value' => (float) $data['total_inventory_value'],
@@ -30,14 +32,19 @@ class DashboardController extends Controller
                 'labels' => $categories->pluck('category_name')->values()->all(),
                 'data' => $categories->pluck('total_stock')->map(fn ($value) => (int) $value)->values()->all(),
             ],
-            'recent_activity' => $data['recent_activity']
-                ->map(fn (ActivityLog $log) => (new ActivityLogResource($log))->resolve())
-                ->values()
-                ->all(),
             'expiring_batches' => $data['expiring_batches']
                 ->map(fn (Batch $batch) => (new BatchResource($batch))->resolve())
                 ->values()
                 ->all(),
-        ]);
+        ];
+
+        if ($canViewActivity) {
+            $props['recent_activity'] = $data['recent_activity']
+                ->map(fn (ActivityLog $log) => (new ActivityLogResource($log))->resolve())
+                ->values()
+                ->all();
+        }
+
+        return Inertia::render('Dashboard', $props);
     }
 }

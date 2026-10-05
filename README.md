@@ -72,7 +72,7 @@ For the local course setup, XAMPP can provide Apache, PHP, and MySQL, but Larave
    | Employee | `employee2` | `Employee2@1234` | none (legacy account) |
    | User | `viewer` | `Viewer@1234` | `viewer@example.test` |
 
-   These credentials are for local development; the demo accounts are skipped in other environments. Seeding again is safe: existing passwords are preserved and the role/permission seeder is idempotent. Employees can use inventory features, `viewer` is view-only, and only admins can manage users at `/users`.
+   These credentials are for local development; the demo accounts are skipped in other environments. Repeated seeding preserves an existing administrator's profile and password. If `ADMIN_USERNAME` belongs to a non-admin account, seeding stops without promoting or modifying that account; use the trusted administrator's current username, or an unused username for initial provisioning. Employees can use inventory features, `viewer` is view-only, and only admins can manage users at `/users`.
 
    For an existing local database, create the demo accounts with `php artisan db:seed --class=EmployeeSeeder`, and a demonstrable catalog with `php artisan db:seed --class=DemoInventorySeeder` (skipped when items already exist). Password-recovery emails are written to `storage/logs/laravel.log` with the default `MAIL_MAILER=log`; configure SMTP in `.env` for a deployment.
 

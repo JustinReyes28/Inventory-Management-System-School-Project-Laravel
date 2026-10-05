@@ -5,7 +5,8 @@
     "scripts": {
         "build": "vite build",
         "build:vercel": "vite build && node scripts/prepare-vercel-static.mjs",
-        "dev": "vite"
+        "dev": "vite",
+        "test:unit": "node --test tests/js/*.test.js"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",

@@ -18,12 +18,18 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // MySQL uses this index to support the foreign key. Remove the
+        // constraint before dropping its supporting index and column.
+        Schema::table('users', function (Blueprint $table): void {
+            $table->dropForeign(['role_id']);
+        });
+
         Schema::table('users', function (Blueprint $table): void {
             $table->dropIndex('users_role_name_index');
         });
 
         Schema::table('users', function (Blueprint $table): void {
-            $table->dropConstrainedForeignId('role_id');
+            $table->dropColumn('role_id');
         });
 
         Schema::table('roles', function (Blueprint $table): void {
