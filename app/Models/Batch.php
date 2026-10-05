@@ -19,8 +19,6 @@ class Batch extends Model
 {
     protected $table = 'batches';
 
-    public $timestamps = false;
-
     protected $fillable = [
         'item_id',
         'batch_number',
@@ -38,6 +36,7 @@ class Batch extends Model
             'quantity' => 'integer',
             'expiry_date' => 'date:Y-m-d',
             'created_at' => 'datetime',
+            'updated_at' => 'datetime',
         ];
     }
 

@@ -20,8 +20,6 @@ class ActivityLog extends Model
 {
     protected $table = 'activity_log';
 
-    public $timestamps = false;
-
     protected $fillable = [
         'user_id',
         'item_id',
@@ -43,6 +41,7 @@ class ActivityLog extends Model
             'old_quantity' => 'integer',
             'new_quantity' => 'integer',
             'created_at' => 'datetime',
+            'updated_at' => 'datetime',
         ];
     }
 

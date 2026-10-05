@@ -20,8 +20,6 @@ class UserNotification extends Model
 {
     protected $table = 'notifications';
 
-    public $timestamps = false;
-
     protected $fillable = [
         'user_id',
         'type',
@@ -79,6 +77,7 @@ class UserNotification extends Model
             'type' => 'string',
             'is_read' => 'boolean',
             'created_at' => 'datetime',
+            'updated_at' => 'datetime',
         ];
     }
 

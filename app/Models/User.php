@@ -32,8 +32,6 @@ class User extends Authenticatable
 
     protected $table = 'users';
 
-    public $timestamps = false;
-
     protected $fillable = [
         'full_name',
         'username',
@@ -54,6 +52,7 @@ class User extends Authenticatable
         return [
             'password_hash' => 'hashed',
             'created_at' => 'datetime',
+            'updated_at' => 'datetime',
         ];
     }
 

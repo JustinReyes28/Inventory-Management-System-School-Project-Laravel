@@ -10,19 +10,8 @@
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link rel="dns-prefetch" href="https://fonts.bunny.net">
 
-    {{-- React Fast Refresh preamble. @vitejs/plugin-react normally injects this via
-         Vite's transformIndexHtml hook, but Laravel renders this Blade view itself,
-         so that hook never runs and the app fails with "can't detect preamble". --}}
-    @if (file_exists(public_path('hot')))
-        <script type="module">
-            import RefreshRuntime from '{{ \Illuminate\Support\Facades\Vite::asset('@react-refresh') }}';
-            RefreshRuntime.injectIntoGlobalHook(window);
-            window.$RefreshReg$ = () => {};
-            window.$RefreshSig$ = () => (type) => type;
-            window.__vite_plugin_react_preamble_installed__ = true;
-        </script>
-    @endif
-
+    {{-- React Fast Refresh preamble, provided by laravel-vite-plugin. --}}
+    @viteReactRefresh
     @vite(['resources/css/app.css', 'resources/js/app.jsx'])
     @inertiaHead
 </head>
