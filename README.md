@@ -6,8 +6,11 @@ A Laravel 13 inventory application with an Inertia/React frontend. The project i
 
 The current web contract is:
 
-- `GET /login` and `POST /login` for username/password authentication
+- `GET /login` and `POST /login` for username/password authentication (owned by Laravel Fortify, throttled 5 attempts/minute)
 - `POST /logout` to end the session
+- `GET /register` and `POST /register` for public registration (new accounts get the `User` role)
+- `GET /forgot-password`, `POST /forgot-password`, `GET /reset-password/{token}`, and `POST /reset-password` for password recovery by email
+- `GET /account` plus Fortify's `PUT /user/profile-information` and `PUT /user/password` for profile and password maintenance
 - `GET /dashboard` for the authenticated dashboard
 - REST-style resources for `/categories`, `/items`, and `/batches`; `/activity-logs` is a read-only history page
 - `/reports` for low-stock, expiry, and activity summaries
@@ -15,7 +18,7 @@ The current web contract is:
 - `/users` for administrator-only user management
 - `PATCH /items/{item}/archive` for the explicit item archive action, plus notification recent/read/read-all endpoints
 
-Inertia page names are `Auth/Login`, `Dashboard`, `Items/Index`, `Categories/Index`, `Batches/Index`, `ActivityLogs/Index`, `Users/Index`, `Reports/Index`, and `Notifications/Index`.
+Inertia page names are `Auth/Login`, `Auth/Register`, `Auth/ForgotPassword`, `Auth/ResetPassword`, `Auth/ConfirmPassword` (guest layout), and `Dashboard`, `Account`, `Items/Index`, `Categories/Index`, `Batches/Index`, `ActivityLogs/Index`, `Users/Index`, `Reports/Index`, `Notifications/Index` (application layout).
 
 ## Requirements
 
@@ -60,17 +63,18 @@ For the local course setup, XAMPP can provide Apache, PHP, and MySQL, but Larave
    php artisan migrate --seed
    ```
 
-   The migrations create the Laravel session, cache, and queue tables as well as the inventory tables. The seeders create the `Admin` and `Employee` roles and an admin account. Override `ADMIN_USERNAME` and `ADMIN_PASSWORD` in your local `.env` if needed. In the `local` and `testing` environments, the seeders also create these employee accounts:
+   The migrations create the Laravel session, cache, queue, and password-reset tables as well as the inventory tables. The seeders create the Spatie roles/permissions (`RolesAndPermissionsSeeder`) and an admin account. Override `ADMIN_USERNAME` and `ADMIN_PASSWORD` in your local `.env` if needed. In the `local` and `testing` environments, the seeders also create these demo accounts:
 
-   | Role | Username | Password |
-   | --- | --- | --- |
-   | Admin | `admin` | `Admin@1234` |
-   | Employee | `employee` | `Employee@1234` |
-   | Employee | `employee2` | `Employee2@1234` |
+   | Role | Username | Password | Email |
+   | --- | --- | --- | --- |
+   | Admin | `admin` | `Admin@1234` | `admin@example.test` |
+   | Employee | `employee` | `Employee@1234` | none (legacy account — add one at `/account`) |
+   | Employee | `employee2` | `Employee2@1234` | none (legacy account) |
+   | User | `viewer` | `Viewer@1234` | `viewer@example.test` |
 
-   These credentials are for local development. The employee accounts are skipped in other environments. Seeding again preserves existing accounts' passwords; the employee seeder also preserves their names and roles. Employees can use inventory features, but only admins can manage users at `/users`.
+   These credentials are for local development; the demo accounts are skipped in other environments. Seeding again is safe: existing passwords are preserved and the role/permission seeder is idempotent. Employees can use inventory features, `viewer` is view-only, and only admins can manage users at `/users`.
 
-   For an existing local database, create the employee accounts with `php artisan db:seed --class=EmployeeSeeder`.
+   For an existing local database, create the demo accounts with `php artisan db:seed --class=EmployeeSeeder`, and a demonstrable catalog with `php artisan db:seed --class=DemoInventorySeeder` (skipped when items already exist). Password-recovery emails are written to `storage/logs/laravel.log` with the default `MAIL_MAILER=log`; configure SMTP in `.env` for a deployment.
 
 6. Build the frontend assets and start the development servers:
 
@@ -115,23 +119,25 @@ php artisan db:seed
 
 The conversion keeps the legacy vocabulary so existing data can be mapped without a translation layer:
 
-- `roles`: `id`, `role_name` (`Admin` and `Employee`)
-- `users`: `full_name`, unique `username`, `password_hash`, `role_id`, and `created_at`
-- `categories`: unique `category_name`
+- `roles` (spatie/laravel-permission): `id`, `name` (`Admin`, `Employee`, `User`), `guard_name`, timestamps — legacy IDs preserved
+- `users`: `full_name`, unique `username`, nullable unique `email`, `password_hash`, `remember_token`, and timestamps
+- `categories`: unique `category_name` and timestamps
 - `items`: `sku`, `name`, `category_id`, `price`, `quantity`, `low_stock_threshold`, and `is_deleted`
 - `batches`: `item_id`, `batch_number`, `quantity`, and `expiry_date`
 - `activity_log`: actor/item references, action type, old/new quantities, description, and timestamp
 - `notifications`: recipient, type, title, message, link, `is_read`, and timestamp
 
-The current `users` table contains `full_name`, a unique `username`, `password_hash`, `role_id`, a nullable Laravel-compatible `remember_token`, and `created_at`; it does not use Laravel's default `email`/`name` fields. Authentication is by **username**, not email; a request containing only an email is not a valid login. The login form may use the nullable `remember_token` for a persistent “remember me” session, while ordinary requests remain session-authenticated.
+Spatie's `permissions`, `model_has_roles`, `model_has_permissions`, and `role_has_permissions` tables hold the RBAC data; the legacy `users.role_id` column and `roles.role_name` were migrated into them and then dropped (backfill `2026_10_05_000003_*`, drop `2026_10_05_000009_*`). Timestamp history: `users`, `batches`, `activity_log`, and `notifications` already recorded `created_at`, which is preserved; `categories` had no timestamp columns and no historical creation times exist, so `2026_10_05_000006_add_domain_table_timestamps` backfills both columns with the migration time.
+
+Authentication is by **username** against `password_hash` (Fortify's `username` config and `User::getAuthPasswordName()` keep the legacy columns); a request containing only an email is not a valid login. The `email` column exists for password recovery and is editable on the account page, and the nullable `remember_token` supports the login form's persistent “remember me” session, while ordinary requests remain session-authenticated.
 
 ## Authentication and authorization
 
-There is no public registration flow. An administrator provisions users from `/users`, and users sign in at `/login` by submitting `username` and `password`.
+Authentication is powered by **Laravel Fortify**: login/logout, public registration, password recovery by email, and profile/password updates. `config/fortify.php` selects the `web` guard, the `username` login field, `/dashboard` as the post-login home, and the feature set (registration, password reset, profile and password updates; email verification, two-factor authentication, and passkeys stay disabled). `App\Providers\FortifyServiceProvider` binds `app/Actions/Fortify/*` and renders the custom React pages for each auth screen under `resources/js/Layouts/GuestLayout.jsx`; the custom login controller was removed so Fortify owns those endpoints. Registration always assigns the **User** role and ignores any submitted role/permission fields. Login is throttled to five attempts per minute per username/IP.
 
-All inventory, dashboard, report, activity-log, and notification pages require an authenticated session. A guest is redirected to the login page. A successful login starts the session and redirects to the intended application page (normally the dashboard); invalid credentials are reported without authenticating the user (the web session may still contain validation errors). `POST /logout` invalidates the session and returns to login.
+Role-based access is powered by **spatie/laravel-permission**. Roles are `Admin`, `Employee`, and `User`; permissions are granular (`view/create/update/delete` for categories, items, batches, and users, plus `view reports`, `view activity logs`, `view notifications`, and `manage notifications`) and are seeded by `database/seeders/RolesAndPermissionsSeeder.php`. Backend routes combine `auth` with the `role`/`permission` middleware aliases registered in `bootstrap/app.php`; policies and form requests re-check with `$user->can(...)`. `HandleInertiaRequests` shares `auth.roles` and `auth.permissions`, and React renders navigation and mutation buttons conditionally from them (`resources/js/Utils/auth.js`). UI visibility is not an authorization boundary.
 
-Roles are represented by `role_id`/`role_name` and enforced on the server by policies or equivalent authorization checks. UI visibility is not an authorization boundary. Employees may use the inventory category, item, and batch resources; `/users` is administrator-only, so an authenticated employee receives a forbidden response rather than a user-management page. Protect user mutations as well as the index page, keep ownership checks in notification queries/actions, and enforce the last-admin and self-delete rules (the last admin cannot be deleted or demoted, and an admin cannot delete their own account).
+Capability matrix: Admins can do everything, including user management at `/users`. Employees use the inventory category, item, and batch resources plus reports and activity logs. Users (including everyone who self-registers) view inventory and reports and manage only their own notifications. An authenticated user without the matching permission receives a forbidden response on direct requests. Ownership checks keep notifications recipient-scoped, and the last-admin and self-delete rules remain (the last admin cannot be deleted or demoted, and an admin cannot delete their own account).
 
 ## Domain behavior
 
@@ -191,7 +197,7 @@ For a disposable database, the full SQL dump can be imported for comparison, but
 The legacy schema also has two important conversion caveats:
 
 1. **The legacy dump has no `notifications` table.** Importing it leaves the notification feature incomplete. The Laravel notifications migration must be applied before testing notifications or seeding notification rows.
-2. **Archived SKUs and foreign keys can block imports/updates.** The legacy `items.is_deleted` flag is not Laravel's `deleted_at` soft-delete convention, and the unique SKU index still includes archived rows. Reusing a SKU from an archived item can therefore collide; the current public application has no restore route, so decide explicitly how archived SKUs will be retained or migrated. The current foreign-key actions are `users.role_id → roles` (`RESTRICT`), `items.category_id → categories` (`RESTRICT`), `batches.item_id → items` (`CASCADE`), `activity_log.user_id → users` (`SET NULL`), `activity_log.item_id → items` (`SET NULL`), and notification/session user references that cascade when a user is removed. Load parent tables first and preserve these actions.
+2. **Archived SKUs and foreign keys can block imports/updates.** The legacy `items.is_deleted` flag is not Laravel's `deleted_at` soft-delete convention, and the unique SKU index still includes archived rows. Reusing a SKU from an archived item can therefore collide; the current public application has no restore route, so decide explicitly how archived SKUs will be retained or migrated. The current foreign-key actions are `items.category_id → categories` (`RESTRICT`), `batches.item_id → items` (`CASCADE`), `activity_log.user_id → users` (`SET NULL`), `activity_log.item_id → items` (`SET NULL`), and notification/session user references that cascade when a user is removed. (The legacy `users.role_id → roles` reference was migrated to Spatie's `model_has_roles` pivot during the RBAC conversion.) Load parent tables first and preserve these actions.
 
 Keep the original dump backed up before testing destructive commands. For a repeatable local conversion, use a disposable database, verify counts and foreign keys, and keep the legacy SQL unchanged.
 
@@ -199,12 +205,16 @@ Keep the original dump backed up before testing destructive commands. For a repe
 
 The feature suite uses `RefreshDatabase` and an in-memory SQLite connection supplied by `phpunit.xml`; it does not require a developer MySQL server. Run it after creating `.env` and generating `APP_KEY` (or provide an equivalent test key in the test environment). It covers the public web contracts rather than controller internals:
 
-- guest redirects and authenticated access;
-- username login and logout;
-- item, category, and batch CRUD/validation, plus activity-log recording/indexing;
-- administrator-only user management;
-- notification ownership and read actions; and
-- dashboard/report metrics.
+- guest redirects and authenticated access (`AuthTest`);
+- Fortify registration (including privilege-escalation attempts), login/logout, intended redirects, throttling, and password recovery with invalid/expired tokens (`FortifyAuthTest`);
+- account profile/email updates and password changes, including legacy accounts without an email (`AccountManagementTest`);
+- Spatie permission sets, Admin/Employee/User access matrices through direct requests, migrated assignments, and repeatable seeding (`RoleAccessTest`);
+- item, category, and batch CRUD/validation, plus activity-log recording/indexing (`InventoryResourceTest`);
+- administrator-only user management with last-admin/self-delete rules (`UserManagementTest`);
+- notification ownership and read actions (`NotificationOwnershipTest`); and
+- dashboard/report metrics (`ReportDashboardTest`).
+
+Full verification results — including the live CSRF check, fresh-database setup, Pint, and the headless-browser suite in `scripts/browser_checks.py` — are recorded in [`docs/VERIFICATION.md`](docs/VERIFICATION.md).
 
 Run all tests with:
 

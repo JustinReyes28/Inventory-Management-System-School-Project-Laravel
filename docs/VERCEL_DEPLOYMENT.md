@@ -20,6 +20,23 @@ This repository uses Laravel 13 for routing, authentication, and database access
 
    The seeder rejects a missing `ADMIN_PASSWORD` when `APP_ENV=production`. Do not use the local development password for a public deployment. Do not run migrations or seeders in Vercel's build command; preview and production builds could then change the same database.
 
+## Schema and mail configuration after the Fortify/Spatie conversion
+
+The schema now also contains Spatie's `permissions`, `model_has_roles`,
+`model_has_permissions`, and `role_has_permissions` tables, a nullable unique
+`users.email` column, `password_reset_tokens`, and `created_at`/`updated_at`
+columns across the domain tables. Run `php artisan migrate --force` against
+the hosted database and then `php artisan db:seed --class=RolesAndPermissionsSeeder --force`
+(or the full `db:seed`, which also provisions the initial admin). Existing
+rows migrate in place: legacy `users.role_id` assignments are backfilled into
+`model_has_roles` before the legacy columns are dropped.
+
+Password recovery needs a working mail transport. Set `MAIL_MAILER` (for
+example `smtp` with `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`,
+`MAIL_FROM_ADDRESS`) in Vercel's environment variables; the local `log` mailer
+only writes to the function's logs and delivers nothing. `password_reset_tokens`
+must exist (created by the migrations) or reset requests will fail.
+
 ## Vercel project settings
 
 Import the Git repository in Vercel. Use this repository as the Root Directory and Node.js 22.x. `vercel.json` selects the **Other** framework preset, runs `npm run build:vercel`, and serves `vercel-static` as the static output. The PHP function runs on `vercel-php@0.9.0` (PHP 8.5). The function build also runs `npm ci` and `npm run build` through Composer's `vercel` script so Laravel can read its Vite manifest.

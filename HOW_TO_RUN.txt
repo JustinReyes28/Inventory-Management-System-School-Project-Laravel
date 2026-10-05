@@ -107,22 +107,37 @@ Run the Laravel migrations and development seeders:
 
     php artisan migrate --seed
 
-The seeders create the Admin and Employee roles and an administrator account.
-With APP_ENV=local or testing, they also create two employee accounts:
+The seeders create the Spatie roles/permissions, the Admin/Employee/User
+roles, and an administrator account. With APP_ENV=local or testing, they also
+create these demo accounts:
 
-    Role        Username     Password
-    Admin       admin        Admin@1234
-    Employee    employee     Employee@1234
-    Employee    employee2    Employee2@1234
+    Role        Username     Password         Email
+    Admin       admin        Admin@1234       admin@example.test
+    Employee    employee     Employee@1234    (none - legacy account)
+    Employee    employee2    Employee2@1234   (none - legacy account)
+    User        viewer       Viewer@1234      viewer@example.test
 
 If you set ADMIN_USERNAME or ADMIN_PASSWORD in .env before seeding, use those
 values for the admin account instead. Existing passwords are preserved when
-seeding again. Employee accounts can use inventory features; user management
-requires an admin account.
+seeding again, and seeding is safe to repeat. Employees can use inventory
+features and reports; viewer is view-only; user management requires an admin
+account.
 
-To add these employee accounts to an existing local database, run:
+To add these demo accounts to an existing local database, run:
 
     php artisan db:seed --class=EmployeeSeeder
+
+To add a small demo catalog (categories, items, batches) for the
+presentation, run (skipped when items already exist):
+
+    php artisan db:seed --class=DemoInventorySeeder
+
+PASSWORD RECOVERY EMAILS: with the default MAIL_MAILER=log, Fortify writes
+the reset email to storage\logs\laravel.log - open it and copy the
+reset-password link to finish the flow. Configure SMTP in .env
+(MAIL_MAILER=smtp, MAIL_HOST, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD) for a
+deployment. Accounts created before the Fortify conversion have no email
+until the user adds one on the /account page.
 
 Optional, only if the application uses publicly stored uploaded files:
 
