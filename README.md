@@ -1,5 +1,13 @@
 # Inventory Management System
 
+Groupmates: see [the setup guide](docs/GROUPMATE_SETUP.md). After installing
+PHP 8.4.1+, Composer 2, Node.js/npm, and Git, clone this repository and run
+`setup.bat`, then `run.bat` (`.\setup.bat` and `.\run.bat` in PowerShell).
+Open `http://127.0.0.1:8000`. Fresh setup uses SQLite, creates demo accounts
+and inventory, and builds React without a MySQL server. On macOS/Linux, use
+`php scripts/setup-local.php` and `php scripts/start-local.php`.
+Existing settings, application keys, and records are preserved.
+
 Deployment to Vercel: see [docs/VERCEL_DEPLOYMENT.md](docs/VERCEL_DEPLOYMENT.md) for the PHP function, Vite assets, database, and environment setup.
 
 A Laravel 13 inventory application with an Inertia/React frontend. The project is a conversion of the original procedural PHP application: Laravel owns routing, authentication, validation, policies, persistence, and the domain rules, while Inertia passes page data to React without requiring a separate API for every screen.
@@ -24,72 +32,64 @@ Inertia page names are `Auth/Login`, `Auth/Register`, `Auth/ForgotPassword`, `Au
 
 Install the following before starting:
 
-- PHP 8.3 or newer, with the PDO MySQL extension and PDO SQLite for the test suite
-- Composer
+- PHP 8.4.1 or newer for the committed dependencies, with PDO SQLite; add PDO MySQL when choosing MySQL
+- Composer 2
 - Node.js `^20.19.0` or `>=22.12.0` (required by Vite 7)
 - npm
-- MySQL 8 (or a compatible MariaDB release)
+- MySQL 8 (or compatible MariaDB) only for the optional MySQL setup
 
 For the local course setup, XAMPP can provide Apache, PHP, and MySQL, but Laravel is served by `php artisan serve` during development. The Laravel document root is `public/`; the old project-level `index.php` is not the current application entry point.
 
-## Setup
+## Optional MySQL setup
 
-1. Install PHP and Composer dependencies:
+For automatic local SQLite setup, follow [the groupmate guide](docs/GROUPMATE_SETUP.md).
 
-   ```bash
-   composer install
+1. On a fresh clone, create `.env` with `Copy-Item .env.example .env`
+   (PowerShell) or `cp .env.example .env` (macOS/Linux). Keep an existing `.env`.
+
+2. Start MySQL and create an empty database named `inventory_system` with a
+   UTF-8 MB4-capable collation. Configure your local database credentials in
+   `.env` and use `QUEUE_CONNECTION=sync` for demonstrations. Do not commit `.env`
+   or import the legacy SQL dump before migrations.
+
+3. Install dependencies, generate a missing key, migrate, seed, and build:
+
+   ```powershell
+   .\setup.bat --mysql
    ```
 
-2. Install the JavaScript dependencies:
-
-   ```bash
-   npm install
-   ```
-
-3. Create the local environment file and generate an application key:
-
-   ```bash
-   cp .env.example .env
-   php artisan key:generate
-   ```
-
-   On PowerShell, use `Copy-Item .env.example .env` instead of `cp`.
-
-4. Start MySQL and create a database named `inventory_system` with a UTF-8/UTF-8 MB4-capable collation. The default example settings target `localhost:3306` with the local MySQL user; replace the username and password with your local values in `.env`. Do not commit `.env`.
-
-5. Apply the Laravel migrations and development seeders:
-
-   ```bash
-   php artisan migrate --seed
-   ```
+   On macOS/Linux, use `php scripts/setup-local.php --mysql`.
 
    The migrations create the Laravel session, cache, queue, and password-reset tables as well as the inventory tables. The seeders create the Spatie roles/permissions (`RolesAndPermissionsSeeder`) and an admin account. Override `ADMIN_USERNAME` and `ADMIN_PASSWORD` in your local `.env` if needed. In the `local` and `testing` environments, the seeders also create these demo accounts:
 
    | Role | Username | Password | Email |
    | --- | --- | --- | --- |
    | Admin | `admin` | `Admin@1234` | `admin@example.test` |
-   | Employee | `employee` | `Employee@1234` | none (legacy account — add one at `/account`) |
-   | Employee | `employee2` | `Employee2@1234` | none (legacy account) |
+   | Employee | `employee` | `Employee@1234` | `employee@example.test` |
+   | Employee | `employee2` | `Employee2@1234` | `employee2@example.test` |
    | User | `viewer` | `Viewer@1234` | `viewer@example.test` |
 
    These credentials are for local development; the demo accounts are skipped in other environments. Repeated seeding preserves an existing administrator's profile and password. If `ADMIN_USERNAME` belongs to a non-admin account, seeding stops without promoting or modifying that account; use the trusted administrator's current username, or an unused username for initial provisioning. Employees can use inventory features, `viewer` is view-only, and only admins can manage users at `/users`.
 
    For an existing local database, create the demo accounts with `php artisan db:seed --class=EmployeeSeeder`, and a demonstrable catalog with `php artisan db:seed --class=DemoInventorySeeder` (skipped when items already exist). Password-recovery emails are written to `storage/logs/laravel.log` with the default `MAIL_MAILER=log`; configure SMTP in `.env` for a deployment.
 
-6. Build the frontend assets and start the development servers:
+4. Start the app:
 
-   ```bash
-   npm run build
-   composer run dev
+   ```powershell
+   .\run.bat
    ```
 
-   `composer run dev` runs `php artisan serve`, the queue listener, the log viewer, and Vite. Open `http://localhost:8000`. If Vite reports a busy port, use the alternate URL printed by Vite and keep the Laravel URL at port 8000.
-
-   For a production-like local check, build once with `npm run build` and serve Laravel with `php artisan serve`. If the application stores uploaded files publicly, create the storage link with `php artisan storage:link`.
+   Open `http://127.0.0.1:8000`. On macOS/Linux, use
+   `php scripts/start-local.php`. For frontend development with hot reload,
+   stop this server and use `composer dev`, which starts Laravel, the queue
+   listener, and Vite; browse the Laravel URL printed in the terminal.
 
 ## Environment
 
-`.env.example` is safe to share: it contains no real passwords, API keys, or production hosts. The important local settings are:
+`.env.example` is safe to share: it contains no real passwords, API keys, or
+production hosts. The following are its manual MySQL defaults. A fresh
+automatic setup selects SQLite, `http://127.0.0.1:8000`, and a synchronous queue
+as described in [the groupmate guide](docs/GROUPMATE_SETUP.md).
 
 | Setting | Local default | Purpose |
 | --- | --- | --- |

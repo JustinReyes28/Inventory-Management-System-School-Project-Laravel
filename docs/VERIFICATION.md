@@ -1,5 +1,36 @@
 # Verification Record
 
+## Groupmate setup verified on 2026-10-05
+
+The Windows setup was exercised in a disposable copy containing only
+Git-tracked files and the new setup files: no `.env`, `vendor/`, `node_modules/`,
+SQLite database, built assets, or ignored runtime directories were copied.
+
+- `setup.bat`: **PASS**. Created runtime directories before Composer's package
+  discovery, installed locked dependencies, generated local SQLite settings/key,
+  applied all 17 migrations, seeded four demo accounts and six inventory items,
+  and built 661 React/Vite modules. MySQL and Vite servers were not needed.
+- `composer setup` rerun: **PASS**, through the final completion message.
+  Compared private hashes before/after: `.env` (including the key and an added
+  comment), user attributes/password hashes, a custom category, items, and
+  batches remained identical. Command output remains visible across nested
+  Composer commands on Windows.
+- `run.bat --port=8015`: **PASS**. The login page and its built React script
+  both returned HTTP 200. The temporary server was stopped afterwards.
+- Fresh-copy application tests: **48 PHP tests / 466 assertions** and **4
+  JavaScript tests** passed.
+- New PHP script syntax and Pint checks: **PASS**. Composer manifest validation
+  passed with the existing exact-version constraint warnings.
+- Local-only guards: a remote `DB_URL` and an outside-checkout SQLite path were
+  refused before connecting; a fresh CLI process with `APP_ENV=production`
+  was refused before starting a server.
+
+Environment: Windows, PHP 8.5.11, Composer 2.10.3, Node 25.2.1, npm 11.6.2.
+The current Composer lockfile requires PHP 8.4.1 or newer. macOS/Linux entry
+points are provided but were not executed on those platforms. The optional
+MySQL setup wrapper was not exercised here; migration/seeding compatibility
+was verified separately below.
+
 ## Review corrections verified on 2026-10-05
 
 The independent review found five defects missed by the initial checks below.

@@ -3,7 +3,13 @@ HOW TO RUN THE INVENTORY MANAGEMENT SYSTEM
 Laravel 13 + Inertia + React (Windows PowerShell)
 ================================================================================
 
-This guide is for the current project folder:
+NEW GROUPMATES: see docs/GROUPMATE_SETUP.md for the portable first-run guide.
+After installing PHP 8.4.1+, Composer 2, Node.js/npm and Git, clone the
+repository, open its folder, run .\setup.bat, then .\run.bat.
+Open http://127.0.0.1:8000. A fresh setup uses SQLite, seeds accounts and
+inventory, and builds assets. MySQL is optional for this script-based setup.
+
+The longer manual MySQL/development guide below uses the author's folder:
 
     C:\Users\Administrator\Documents\Web Dev Projects\Final Term Project React\proj_react
 
@@ -17,7 +23,7 @@ folder. The project folder must contain package.json, composer.json, and artisan
 
 Before starting, install and make available:
 
-  * PHP 8.3 or newer
+  * PHP 8.4.1 or newer (required by the committed dependency lockfile)
       The PDO MySQL extension is required.
       The PDO SQLite extension is useful for running tests.
   * Composer
@@ -64,7 +70,7 @@ Each command should return:
 Run these commands once from proj_react:
 
     composer install
-    npm install
+    npm ci
 
 Create the environment file if it does not already exist:
 
@@ -113,8 +119,8 @@ create these demo accounts:
 
     Role        Username     Password         Email
     Admin       admin        Admin@1234       admin@example.test
-    Employee    employee     Employee@1234    (none - legacy account)
-    Employee    employee2    Employee2@1234   (none - legacy account)
+    Employee    employee     Employee@1234    employee@example.test
+    Employee    employee2    Employee2@1234   employee2@example.test
     User        viewer       Viewer@1234      viewer@example.test
 
 If you set ADMIN_USERNAME or ADMIN_PASSWORD in .env before seeding, use those
