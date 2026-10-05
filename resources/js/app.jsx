@@ -12,15 +12,14 @@ createInertiaApp({
         // Lazy page loading through Vite's glob + resolvePageComponent.
         resolvePageComponent(`./Pages/${name}.jsx`, pages).then((module) => {
             // Guest screens under Auth/ render their own GuestLayout and must
-            // not inherit the authenticated application navigation.
-            if (name.startsWith('Auth/')) {
-                return module;
+            // not inherit the authenticated application navigation. Every
+            // other page is wrapped in AppLayout (Inertia renders the page as
+            // the layout's children).
+            if (!name.startsWith('Auth/') && module.default && !module.default.layout) {
+                module.default.layout = AppLayout;
             }
 
-            return {
-                ...module,
-                layout: ({ children }) => <AppLayout>{children}</AppLayout>,
-            };
+            return module;
         }),
     setup({ el, App, props }) {
         createRoot(el).render(<App {...props} />);

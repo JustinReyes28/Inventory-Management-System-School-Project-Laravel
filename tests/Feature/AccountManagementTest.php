@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Enums\RoleName;
-use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Testing\AssertableInertia;
 

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Spatie\Permission\Models\Role;
 use Spatie\Permission\Traits\HasRoles;
 
 /**
@@ -15,8 +16,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property string $username
  * @property string|null $email
  * @property string $password_hash
- *
- * @property-read \Spatie\Permission\Models\Role|null $role
+ * @property-read Role|null $role
  */
 class User extends Authenticatable
 {

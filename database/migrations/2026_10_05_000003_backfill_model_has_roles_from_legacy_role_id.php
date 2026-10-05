@@ -41,7 +41,7 @@ return new class extends Migration
             ->count();
 
         if ($assigned < $expected) {
-            throw new \RuntimeException(
+            throw new RuntimeException(
                 "Role migration incomplete: expected {$expected} Spatie assignments from users.role_id, found {$assigned}."
             );
         }

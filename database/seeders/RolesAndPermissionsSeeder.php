@@ -89,9 +89,18 @@ class RolesAndPermissionsSeeder extends Seeder
 
     public function run(): void
     {
+        $registrar = app(PermissionRegistrar::class);
+
+        // Seeding may run inside Model::withoutEvents(), which suppresses the
+        // model events that normally flush Spatie's permission cache. Flush it
+        // explicitly around the lookup phases so every step sees current rows.
+        $registrar->forgetCachedPermissions();
+
         foreach (self::ALL_PERMISSIONS as $permission) {
             Permission::findOrCreate($permission, self::GUARD);
         }
+
+        $registrar->forgetCachedPermissions();
 
         // Role IDs 1 (Admin) and 2 (Employee) are preserved from the legacy
         // roles table; the User role is appended for public registration.
@@ -104,6 +113,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $employee->syncPermissions(self::EMPLOYEE_PERMISSIONS);
         $user->syncPermissions(self::USER_PERMISSIONS);
 
-        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        // Repeated seeding stays safe and the permission cache is refreshed.
+        $registrar->forgetCachedPermissions();
     }
 }
