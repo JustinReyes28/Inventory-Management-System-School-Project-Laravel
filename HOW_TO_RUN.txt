@@ -1,430 +1,71 @@
 ================================================================================
 HOW TO RUN THE INVENTORY MANAGEMENT SYSTEM
-Laravel 13 + Inertia + React (Windows PowerShell)
+Windows quick start
 ================================================================================
 
-NEW GROUPMATES: see docs/GROUPMATE_SETUP.md for the portable first-run guide.
-After installing PHP 8.4.1+, Composer 2, Node.js/npm and Git, clone the
-repository, open its folder, run .\setup.bat, then .\run.bat.
-Open http://127.0.0.1:8000. A fresh setup uses SQLite, seeds accounts and
-inventory, and builds assets. MySQL is optional for this script-based setup.
+Install these tools once:
 
-The longer manual MySQL/development guide below uses the author's folder:
+  * PHP 8.4.1 or newer
+  * Composer 2
+  * Node.js with npm (a supported LTS release)
+  * Git
 
-    C:\Users\Administrator\Documents\Web Dev Projects\Final Term Project React\proj_react
-
-Important: Run the commands from the proj_react folder, not from its parent
-folder. The project folder must contain package.json, composer.json, and artisan.
-
+The full installation guide, including PHP extensions, MySQL, demo accounts,
+updates, and troubleshooting, is in docs/GROUPMATE_SETUP.md.
 
 --------------------------------------------------------------------------------
-1. REQUIRED SOFTWARE
+FIRST-TIME SETUP
 --------------------------------------------------------------------------------
 
-Before starting, install and make available:
+Open PowerShell in the folder where you want to keep the project and run:
 
-  * PHP 8.4.1 or newer (required by the committed dependency lockfile)
-      The PDO MySQL extension is required.
-      The PDO SQLite extension is useful for running tests.
-  * Composer
-  * Node.js 20.19+ or 22.12+
-  * npm
-  * MySQL 8 or a compatible MariaDB release
+    git clone https://github.com/JustinReyes28/Inventory-Management-System-School-Project-Laravel.git InventoryManagement
+    cd InventoryManagement
+    .\setup.bat
+    .\run.bat
 
-XAMPP can provide PHP, Composer-related tools, and MySQL. For this project,
-Laravel is served with `php artisan serve`, so Apache does not need to serve the
-application. XAMPP's MySQL service does need to be running.
+Open http://127.0.0.1:8000. Keep the run terminal open; press Ctrl+C to stop
+the app.
 
+The setup script installs locked dependencies, creates a local .env and
+application key when needed, creates and migrates a SQLite database, seeds
+demo accounts and inventory, and builds the React assets. MySQL and Apache are
+optional. Each groupmate gets a separate local database.
 
---------------------------------------------------------------------------------
-2. OPEN THE CORRECT FOLDER
---------------------------------------------------------------------------------
+Fresh local demo logins:
 
-Open PowerShell and run:
+    Role        Username     Password
+    Admin       admin        Admin@1234
+    Employee    employee     Employee@1234
+    Employee    employee2    Employee2@1234
+    User        viewer       Viewer@1234
 
-    cd "C:\Users\Administrator\Documents\Web Dev Projects\Final Term Project React\proj_react"
-
-Check that you are in the right place:
-
-    Get-Location
-
-It should end with:
-
-    Final Term Project React\proj_react
-
-You can also check that the project files are visible:
-
-    Test-Path .\package.json
-    Test-Path .\composer.json
-    Test-Path .\artisan
-
-Each command should return:
-
-    True
-
+Reruns keep your existing .env, nonempty application key, passwords for
+existing demo accounts, and inventory. They never reset database tables.
 
 --------------------------------------------------------------------------------
-3. FIRST-TIME INSTALLATION
+DAILY USE
 --------------------------------------------------------------------------------
 
-Run these commands once from proj_react:
+From the cloned project folder, start the built app with:
 
-    composer install
-    npm ci
+    .\run.bat
 
-Create the environment file if it does not already exist:
+For React development with hot reload, stop that server and run:
 
-    if (-not (Test-Path .env)) { Copy-Item .env.example .env }
-
-Generate the Laravel application key:
-
-    php artisan key:generate
-
-Do not edit or share the real .env file. It may contain local database
-credentials.
-
-
---------------------------------------------------------------------------------
-4. START MYSQL AND CREATE THE DATABASE
---------------------------------------------------------------------------------
-
-Start MySQL. If using XAMPP, open the XAMPP Control Panel and click Start for
-MySQL.
-
-Create this database in phpMyAdmin or with your database administrator:
-
-    CREATE DATABASE inventory_system
-      CHARACTER SET utf8mb4
-      COLLATE utf8mb4_unicode_ci;
-
-The example .env file uses:
-
-    DB_CONNECTION=mysql
-    DB_HOST=localhost
-    DB_PORT=3306
-    DB_DATABASE=inventory_system
-    DB_USERNAME=root
-    DB_PASSWORD=
-
-If your MySQL username or password is different, edit the DB_USERNAME and
-DB_PASSWORD values in .env before continuing.
-
-Run the Laravel migrations and development seeders:
-
-    php artisan migrate --seed
-
-The seeders create the Spatie roles/permissions, the Admin/Employee/User
-roles, and an administrator account. With APP_ENV=local or testing, they also
-create these demo accounts:
-
-    Role        Username     Password         Email
-    Admin       admin        Admin@1234       admin@example.test
-    Employee    employee     Employee@1234    employee@example.test
-    Employee    employee2    Employee2@1234   employee2@example.test
-    User        viewer       Viewer@1234      viewer@example.test
-
-If you set ADMIN_USERNAME or ADMIN_PASSWORD in .env before seeding, use those
-values for the admin account instead. Existing passwords are preserved when
-seeding again, and seeding is safe to repeat. Employees can use inventory
-features and reports; viewer is view-only; user management requires an admin
-account.
-
-To add these demo accounts to an existing local database, run:
-
-    php artisan db:seed --class=EmployeeSeeder
-
-To add a small demo catalog (categories, items, batches) for the
-presentation, run (skipped when items already exist):
-
-    php artisan db:seed --class=DemoInventorySeeder
-
-PASSWORD RECOVERY EMAILS: with the default MAIL_MAILER=log, Fortify writes
-the reset email to storage\logs\laravel.log - open it and copy the
-reset-password link to finish the flow. Configure SMTP in .env
-(MAIL_MAILER=smtp, MAIL_HOST, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD) for a
-deployment. Accounts created before the Fortify conversion have no email
-until the user adds one on the /account page.
-
-Optional, only if the application uses publicly stored uploaded files:
-
-    php artisan storage:link
-
-
---------------------------------------------------------------------------------
-5. START THE APPLICATION ON WINDOWS
---------------------------------------------------------------------------------
-
-The complete `composer dev` command starts Laravel, the queue worker, and Vite
-together in one terminal. This is the recommended way to start the application.
-
-Pail is no longer part of `composer dev`, because it cannot run on native Windows
-(it requires the PHP `pcntl` extension). The dev script is also no longer run
-with `--kill-others`, so if one process stops, the others keep running instead
-of shutting the whole stack down.
-
-Before starting, stop any old Vite or Composer development process with Ctrl+C.
-
-RECOMMENDED - ONE TERMINAL
-
-    cd "C:\Users\Administrator\Documents\Web Dev Projects\Final Term Project React\proj_react"
     composer dev
 
-Keep this terminal open. It reports three processes:
+Open the Laravel URL shown in the terminal (normally http://127.0.0.1:8000).
+Keep the terminal open while using the app. React changes reload through Vite.
 
-    [server]   Server running on http://[IP_ADDRESS]:8000
-    [queue]    Processing jobs from the [default] queue
-    [vite]     VITE ready, Local: http://[IP_ADDRESS]:5173
+To pull project updates, stop the app first, then run:
 
-If you see the [queue] line report that it exited, this is harmless. The web
-server and Vite keep running, and the application still works.
+    git pull --ff-only
+    .\setup.bat
+    .\run.bat
 
-MANUAL - TWO SEPARATE TERMINALS
-
-Use this if you prefer to see each process on its own, or if `composer dev` is
-unavailable.
-
-TERMINAL 1 - LARAVEL SERVER
-
-    cd "C:\Users\Administrator\Documents\Web Dev Projects\Final Term Project React\proj_react"
-    php artisan serve
-
-Keep this terminal open. It should report a server on port 8000.
-
-TERMINAL 2 - VITE / REACT ASSETS
-
-Open a second PowerShell window and run:
-
-    cd "C:\Users\Administrator\Documents\Web Dev Projects\Final Term Project React\proj_react"
-    npm run dev
-
-Keep this terminal open too. Vite normally reports port 5173.
-
-IMPORTANT: Vite is configured with `strictPort: true` and binds to the IPv4
-loopback address, so `public\hot` records `http://[IP_ADDRESS]:5173`. Always open
-the application through the Laravel port, never directly on port 5173.
-
-Open the application in your browser at:
-
-    http://localhost:8000
-
-The direct login page is:
-
-    http://localhost:8000/login
-
-Do not use http://localhost:5173 as the main application URL. Port 5173 is only
-Vite's frontend development-asset server.
-
-
---------------------------------------------------------------------------------
-6. OPTIONAL: RUN THE QUEUE WORKER
---------------------------------------------------------------------------------
-
-If the application uses database jobs, open a third PowerShell terminal and run:
-
-    cd "C:\Users\Administrator\Documents\Web Dev Projects\Final Term Project React\proj_react"
-    php artisan queue:listen --tries=1 --timeout=0
-
-You can skip this for basic page and CRUD testing.
-
-
---------------------------------------------------------------------------------
-7. WINDOWS LOG VIEWING
---------------------------------------------------------------------------------
-
-Pail cannot run on standard Windows PHP because it requires the Unix-style
-`pcntl` extension. To follow the normal Laravel log instead, open another
-PowerShell terminal in proj_react and run:
-
-    Get-Content .\storage\logs\laravel.log -Wait -Tail 20
-
-Press Ctrl+C to stop following the log.
-
-
---------------------------------------------------------------------------------
-8. STOP THE DEVELOPMENT SERVERS
---------------------------------------------------------------------------------
-
-In each terminal that is running a development process, press:
-
-    Ctrl+C
-
-Stop both the Laravel terminal and the Vite terminal before restarting them.
-
-
---------------------------------------------------------------------------------
-9. COMMON PROBLEMS
---------------------------------------------------------------------------------
-
-PROBLEM: The login page is completely blank / white
-
-This is the most common problem. A white page means the HTML loaded but React
-never started, so `<div id="app">` stays empty. Check these in order.
-
-Step 1 - Confirm Vite is actually running.
-
-    Test-Path .\public\hot
-
-  * If it prints False, you are serving the built assets instead. Run
-    `npm run dev` to create it, or run `npm run build` and stay on the built
-    assets.
-  * If it prints True, look at what URL it records:
-
-        Get-Content .\public\hot
-
-    This must match the host that Vite is currently bound to. If it points at a
-    port where nothing is listening, the file is stale. Stop Vite, delete the
-    file, and start `npm run dev` again:
-
-        Remove-Item .\public\hot
-        npm run dev
-
-Step 2 - Check the browser console for errors.
-
-Press F12, open the Console tab, and reload the page. You are looking for a red
-error. Two specific ones have caused this before:
-
-    Uncaught Error: @vitejs/plugin-react can't detect preamble. Something is wrong.
-
-  This means the React Fast Refresh preamble is missing. The preamble is injected
-  automatically by `app.blade.php`, but only when `public\hot` exists, so it is
-  skipped in production builds where it is not needed. Fix by making sure
-  `public\hot` exists during development, then hard-refresh with Ctrl+F5.
-
-    Failed to load module script or ERR_CONNECTION_REFUSED
-
-  This means the browser could not reach the Vite dev server. The URL in
-  `public\hot` must be reachable from the browser. See step 1.
-
-Step 3 - Hard refresh.
-
-    Ctrl+F5
-
-Browsers cache module scripts aggressively. Always hard-refresh after changing
-anything in `resources/js` or the Blade views.
-
-Step 4 - Confirm the server-rendered HTML is still correct.
-
-    (Invoke-WebRequest http://localhost:8000/login -UseBasicParsing).Content |
-
-It should contain a `<div id="app">` and a `data-page` JSON block. If that is
-present but the page is still white, the problem is in the JavaScript, so return
-to step 2 and read the console.
-
---------------------------------------------------------------------------------
-
-PROBLEM: npm says `Missing script: "dev"`
-
-Cause: You are in the parent folder instead of proj_react.
-
-Fix:
-
-    cd "C:\Users\Administrator\Documents\Web Dev Projects\Final Term Project React\proj_react"
-    npm run
-
-You should see `dev` and `build` in the script list.
-
---------------------------------------------------------------------------------
-
-PROBLEM: `The [pcntl] extension is required to run Pail.`
-
-Cause: Pail requires the Unix-style `pcntl` extension, which the standard Windows
-PHP build does not have.
-
-Fix: Pail has been removed from the `composer dev` script, so this error should
-no longer appear. If you still see it, `composer.json` is an older copy. Use the
-normal log command in section 7 to follow logs instead.
-
---------------------------------------------------------------------------------
-
-PROBLEM: Vite says port 5173 is already in use
-
-Cause: Another Vite process is already running, usually in another PowerShell
-window. Vite is configured with `strictPort: true`, so it stops with an error
-instead of quietly moving to another port.
-
-Fix: Close the other development terminal or press Ctrl+C there. Then run
-`npm run dev` again. You can also try:
-
-    npm run dev -- --port 5174
-
-If you change the Vite port, `public\hot` is updated automatically, so the
-application should still be opened through the Laravel port, normally
-`http://localhost:8000`.
-
---------------------------------------------------------------------------------
-
-PROBLEM: Laravel reports a database connection error
-
-Check that MySQL is running, the database `inventory_system` exists, and the
-DB values in .env are correct. Then try:
-
-    php artisan migrate --seed
-
-For a quick Laravel configuration reset:
-
-    php artisan config:clear
-
-Check the migration status with:
-
-    php artisan migrate:status
-
---------------------------------------------------------------------------------
-
-PROBLEM: Laravel reports a missing application key
-
-Run:
-
-    php artisan key:generate
-
-Then restart `php artisan serve` if it was already running.
-
---------------------------------------------------------------------------------
-
-PROBLEM: Port 8000 is already in use
-
-Find the process using the port:
-
-    Get-NetTCPConnection -LocalPort 8000
-
-Or start Laravel on another port:
-
-    php artisan serve --port=8001
-
-Then open:
-
-    http://localhost:8001
-
-If you change the port, update APP_URL in .env to match and run
-`php artisan config:clear`.
-
-
---------------------------------------------------------------------------------
-10. QUICK REFERENCE - NORMAL DAILY START
---------------------------------------------------------------------------------
-
-After the first-time installation and database setup, daily startup is:
-
-TERMINAL 1:
-
-    cd "C:\Users\Administrator\Documents\Web Dev Projects\Final Term Project React\proj_react"
-    composer dev
-
-This starts the Laravel server, the queue worker, and Vite together. See section
-5 if you prefer to run them in separate terminals.
-
-BROWSER:
-
-    http://localhost:8000
-
-If the page is blank, see the first entry in section 9.
-
-For a production-style asset build:
-
-    npm run build
-
-Then serve Laravel with:
-
-    php artisan serve
+The setup script applies pending migrations and rebuilds frontend assets. Do
+not use migrate:fresh to update a database; it deletes tables and records.
 
 ================================================================================
 END OF GUIDE
