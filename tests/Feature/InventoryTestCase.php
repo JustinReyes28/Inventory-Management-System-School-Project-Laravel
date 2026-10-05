@@ -2,12 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Enums\RoleName;
 use App\Models\User;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Testing\TestResponse;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 /**
@@ -21,6 +24,14 @@ abstract class InventoryTestCase extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Spatie roles/permissions back every access decision under test.
+        $this->seed(RolesAndPermissionsSeeder::class);
+    }
+
     protected function createUser(
         string $role = 'employee',
         ?string $username = null,
@@ -29,62 +40,44 @@ abstract class InventoryTestCase extends TestCase
     ): User {
         $username ??= $role.'-'.uniqid('', true);
         $fullName ??= ucfirst($role).' User';
-        $roleId = $this->roleId($role);
 
         $attributes = [
             'full_name' => $fullName,
             'username' => $username,
             'password_hash' => Hash::make($password),
-            'role_id' => $roleId,
             'created_at' => now(),
         ];
 
         $id = $this->insertLegacyRow('users', $attributes);
 
-        return User::query()->findOrFail($id);
+        $user = User::query()->findOrFail($id);
+        $user->assignRole($this->roleName($role));
+
+        return $user;
+    }
+
+    protected function roleName(string $role): string
+    {
+        return match (strtolower($role)) {
+            'admin', 'administrator' => RoleName::ADMIN->value,
+            'employee', 'staff' => RoleName::EMPLOYEE->value,
+            'user', 'viewer' => RoleName::USER->value,
+            default => $role,
+        };
     }
 
     protected function roleId(string $role): int
     {
-        $role = match (strtolower($role)) {
-            'admin', 'administrator' => 'Admin',
-            'employee', 'staff' => 'Employee',
-            default => $role,
-        };
+        return (int) Role::findOrCreate($this->roleName($role), 'web')->id;
+    }
 
-        $legacyId = match ($role) {
-            'Admin' => 1,
-            'Employee' => 2,
-            default => null,
-        };
-
-        $existing = DB::table('roles')
-            ->where('role_name', $role)
-            ->when($legacyId !== null, fn ($query) => $query->orWhere('id', $legacyId))
-            ->value('id');
-
-        if ($existing !== null) {
-            return (int) $existing;
-        }
-
-        $attributes = ['role_name' => $role];
-        if ($legacyId !== null) {
-            $attributes = ['id' => $legacyId, ...$attributes];
-        }
-        if (Schema::hasColumn('roles', 'created_at')) {
-            $attributes['created_at'] = now();
-        }
-        if (Schema::hasColumn('roles', 'updated_at')) {
-            $attributes['updated_at'] = now();
-        }
-
-        if ($legacyId !== null) {
-            DB::table('roles')->insert($attributes);
-
-            return $legacyId;
-        }
-
-        return (int) DB::table('roles')->insertGetId($attributes);
+    protected function assertUserHasRole(User $user, string $role): void
+    {
+        $this->assertDatabaseHas('model_has_roles', [
+            'role_id' => $this->roleId($role),
+            'model_id' => $user->getKey(),
+            'model_type' => (new User)->getMorphClass(),
+        ]);
     }
 
     protected function createCategory(string $name = 'Electronics'): int

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Testing\AssertableInertia;
@@ -19,7 +20,7 @@ class UserManagementTest extends InventoryTestCase
                 'full_name' => 'Should Not Exist',
                 'username' => 'should.not.exist',
                 'password' => 'password',
-                'role_id' => 2,
+                'role_id' => $this->roleId('employee'),
             ])
             ->assertForbidden();
         $this->actingAs($employee)
@@ -27,7 +28,7 @@ class UserManagementTest extends InventoryTestCase
                 'full_name' => 'Changed By Employee',
                 'username' => 'changed.by.employee',
                 'password' => 'password',
-                'role_id' => 2,
+                'role_id' => $this->roleId('employee'),
             ])
             ->assertForbidden();
         $this->actingAs($employee)
@@ -63,10 +64,10 @@ class UserManagementTest extends InventoryTestCase
         $this->assertDatabaseHas('users', [
             'full_name' => 'New Operator',
             'username' => 'new.operator',
-            'role_id' => $employeeRoleId,
         ]);
 
         $newUserId = (int) DB::table('users')->where('username', 'new.operator')->value('id');
+        $this->assertUserHasRole(User::query()->findOrFail($newUserId), 'employee');
         $this->assertTrue(Hash::check('new-password', (string) DB::table('users')->where('id', $newUserId)->value('password_hash')));
 
         $this->actingAs($admin)
@@ -117,7 +118,7 @@ class UserManagementTest extends InventoryTestCase
         $this->actingAs($admin)
             ->delete('/users/'.$admin->id)
             ->assertRedirect();
-        $this->assertDatabaseHas('users', ['id' => $admin->id, 'role_id' => 1]);
+        $this->assertUserHasRole($admin, 'admin');
 
         $this->actingAs($admin)
             ->delete('/users/'.$otherAdmin->id)
@@ -131,9 +132,6 @@ class UserManagementTest extends InventoryTestCase
                 'role_id' => $employeeRoleId,
             ])
             ->assertRedirect();
-        $this->assertDatabaseHas('users', [
-            'id' => $admin->id,
-            'role_id' => 1,
-        ]);
+        $this->assertUserHasRole($admin, 'admin');
     }
 }

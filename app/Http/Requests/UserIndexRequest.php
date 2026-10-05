@@ -8,7 +8,7 @@ class UserIndexRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->isAdmin() === true;
+        return $this->user()?->can('view users') === true;
     }
 
     protected function prepareForValidation(): void

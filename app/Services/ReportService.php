@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\ActivityLog;
 use App\Models\Batch;
 use App\Models\Item;
+use App\Models\User;
 use BackedEnum;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
@@ -156,15 +157,21 @@ class ReportService
 
         $query = ActivityLog::query()
             ->join('users', 'users.id', '=', 'activity_log.user_id')
-            ->join('roles', 'roles.id', '=', 'users.role_id')
+            // Spatie role assignments live in model_has_roles. Left joins keep
+            // audit history visible even for users without an assigned role.
+            ->leftJoin('model_has_roles', function ($join): void {
+                $join->on('model_has_roles.model_id', '=', 'users.id')
+                    ->where('model_has_roles.model_type', (new User)->getMorphClass());
+            })
+            ->leftJoin('roles', 'roles.id', '=', 'model_has_roles.role_id')
             ->select([
                 'users.id as user_id',
                 'users.full_name',
-                'roles.role_name',
+                'roles.name as role_name',
                 'activity_log.action_type',
             ])
             ->selectRaw('COUNT(*) AS action_count')
-            ->groupBy('users.id', 'users.full_name', 'roles.role_name', 'activity_log.action_type')
+            ->groupBy('users.id', 'users.full_name', 'roles.name', 'activity_log.action_type')
             ->orderBy('users.full_name')
             ->orderBy('activity_log.action_type');
 

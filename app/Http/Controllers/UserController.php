@@ -2,11 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\RoleId;
 use App\Http\Requests\UserIndexRequest;
 use App\Http\Requests\UserRequest;
 use App\Http\Resources\UserResource;
-use App\Models\Role;
 use App\Models\User;
 use App\Services\UserManagementService;
 use Illuminate\Http\JsonResponse;
@@ -14,6 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
@@ -21,11 +20,11 @@ class UserController extends Controller
 
     public function index(UserIndexRequest $request): Response
     {
-        $this->authorize('manage-users');
+        $this->authorize('viewAny', User::class);
         $filters = $request->validated();
 
         $users = User::query()
-            ->with('role:id,role_name')
+            ->with('roles:id,name')
             ->when($filters['search'] ?? null, function ($query, string $search): void {
                 $term = '%'.mb_strtolower($search).'%';
                 $query->where(function ($query) use ($term): void {
@@ -33,7 +32,10 @@ class UserController extends Controller
                         ->orWhereRaw('LOWER(username) LIKE ?', [$term]);
                 });
             })
-            ->when($filters['role_id'] ?? null, fn ($query, $roleId) => $query->where('role_id', $roleId))
+            ->when(
+                $filters['role_id'] ?? null,
+                fn ($query, $roleId) => $query->whereHas('roles', fn ($roles) => $roles->whereKey($roleId)),
+            )
             ->orderBy('full_name')
             ->get()
             ->map(fn (User $user) => (new UserResource($user))->resolve($request))
@@ -42,11 +44,11 @@ class UserController extends Controller
 
         $roles = Role::query()
             ->orderBy('id')
-            ->get(['id', 'role_name'])
+            ->get(['id', 'name'])
             ->map(fn (Role $role) => [
                 'id' => $role->id,
-                'name' => $role->role_name,
-                'role_name' => $role->role_name,
+                'name' => $role->name,
+                'role_name' => $role->name,
             ])
             ->all();
 
@@ -62,14 +64,14 @@ class UserController extends Controller
 
     public function create(): RedirectResponse
     {
-        $this->authorize('manage-users');
+        $this->authorize('create', User::class);
 
         return to_route('users.index');
     }
 
     public function store(UserRequest $request): RedirectResponse
     {
-        $this->authorize('manage-users');
+        $this->authorize('create', User::class);
 
         return $this->mutate(
             fn () => $this->users->create($request->validated(), $request->user()),
@@ -81,7 +83,7 @@ class UserController extends Controller
     public function show(User $user): JsonResponse
     {
         $this->authorize('view', $user);
-        $user->load('role:id,role_name');
+        $user->load('roles:id,name');
 
         return (new UserResource($user))->response();
     }
@@ -114,10 +116,6 @@ class UserController extends Controller
 
         if ($actor->is($user)) {
             return back()->with('error', 'You cannot delete your own account.');
-        }
-
-        if ($user->isAdmin() && User::query()->where('role_id', RoleId::ADMIN->value)->count() <= 1) {
-            return back()->with('error', 'The last admin account cannot be deleted.');
         }
 
         $this->authorize('delete', $user);

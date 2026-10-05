@@ -9,7 +9,10 @@ class UserRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->isAdmin() === true;
+        $user = $this->user();
+
+        return $user !== null
+            && $user->can($this->isMethod('POST') ? 'create users' : 'update users');
     }
 
     protected function prepareForValidation(): void
@@ -50,6 +53,8 @@ class UserRequest extends FormRequest
                 'min:6',
                 'max:255',
             ],
+            // Role changes are validated Spatie operations: the id must exist
+            // in the Spatie roles table and is applied via syncRoles().
             'role_id' => ['bail', 'required', 'integer', 'exists:roles,id'],
         ];
     }

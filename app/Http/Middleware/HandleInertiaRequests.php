@@ -33,7 +33,14 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         return [
-            'auth.user' => fn () => $this->authenticatedUser($request->user()),
+            'auth' => [
+                'user' => fn () => $this->authenticatedUser($request->user()),
+                // Spatie roles/permissions drive conditional React rendering.
+                'roles' => fn () => $request->user()?->getRoleNames()->values() ?? [],
+                'permissions' => fn () => $request->user()?->getAllPermissions()
+                    ->pluck('name')
+                    ->values() ?? [],
+            ],
             'notificationSummary' => function () use ($request) {
                 $user = $request->user();
 
@@ -89,20 +96,20 @@ class HandleInertiaRequests extends Middleware
             return null;
         }
 
-        $role = $user->load('role:id,role_name')->role;
+        $role = $user->load('roles:id,name')->roles->first();
 
         return [
             'id' => $user->id,
             'full_name' => $user->full_name,
             'username' => $user->username,
-            'role_id' => $user->role_id,
-            'is_admin' => $user->isAdmin(),
+            'email' => $user->email,
+            'role_id' => $role?->id,
             'role' => $role ? [
                 'id' => $role->id,
-                'name' => $role->role_name,
-                'role_name' => $role->role_name,
+                'name' => $role->name,
+                'role_name' => $role->name,
             ] : null,
-            'role_name' => $role?->role_name,
+            'role_name' => $role?->name,
             'created_at' => $user->created_at?->toIso8601String(),
         ];
     }

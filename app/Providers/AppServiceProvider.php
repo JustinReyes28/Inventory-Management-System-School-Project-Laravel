@@ -28,7 +28,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Gate::define('manage-users', fn (User $user): bool => $user->isAdmin());
+        // Role/permission authority lives in spatie/laravel-permission
+        // (routes use the role/permission middleware, policies and form
+        // requests ask $user->can(...)). Only model policies remain here.
         Gate::policy(User::class, UserPolicy::class);
         Gate::policy(UserNotification::class, UserNotificationPolicy::class);
 

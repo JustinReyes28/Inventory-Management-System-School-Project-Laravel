@@ -3,14 +3,15 @@
 namespace App\Services;
 
 use App\Enums\ActivityAction;
-use App\Enums\RoleId;
-use App\Models\Role;
+use App\Enums\RoleName;
 use App\Models\User;
 use DomainException;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use InvalidArgumentException;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class UserManagementService
 {
@@ -32,7 +33,7 @@ class UserManagementService
         $passwordHash = Hash::make($password);
 
         return DB::transaction(function () use ($values, $passwordHash, $actor): User {
-            $this->ensureRoleExists($values['role_id']);
+            $role = $this->resolveRole($values['role_id']);
             $this->ensureUsernameIsAvailable($values['username']);
 
             $user = User::query()->create([
@@ -41,18 +42,19 @@ class UserManagementService
                 // Hash explicitly so the legacy password_hash contract is
                 // obvious at the service boundary.
                 'password_hash' => $passwordHash,
-                'role_id' => $values['role_id'],
             ]);
 
-            $role = RoleId::from($values['role_id'])->label();
+            // Roles are assigned through validated Spatie operations only.
+            $user->assignRole($role);
+
             $this->activityLog->log(
                 $actor,
                 null,
                 ActivityAction::CREATE,
-                description: "Created user: {$user->full_name} ({$user->username}) as {$role}",
+                description: "Created user: {$user->full_name} ({$user->username}) as {$role->name}",
             );
 
-            return $user->load('role:id,role_name');
+            return $user->load('roles:id,name');
         }, 3);
     }
 
@@ -71,30 +73,36 @@ class UserManagementService
                 ->lockForUpdate()
                 ->firstOrFail();
 
+            $role = null;
             if (array_key_exists('role_id', $values)) {
-                $this->ensureRoleExists($values['role_id']);
-                $this->ensureAdminRemains($locked, (int) $values['role_id']);
+                $role = $this->resolveRole($values['role_id']);
+                $this->ensureAdminRemains($locked, $role);
             }
 
             if (array_key_exists('username', $values)) {
                 $this->ensureUsernameIsAvailable($values['username'], $locked->getKey());
             }
 
-            $locked->fill($values);
+            $locked->fill(Arr::except($values, ['role_id']));
             if ($passwordHash !== null) {
                 $locked->password_hash = $passwordHash;
             }
             $locked->save();
 
-            $role = RoleId::from((int) $locked->role_id)->label();
+            if ($role !== null) {
+                $locked->syncRoles([$role]);
+                app(PermissionRegistrar::class)->forgetCachedPermissions();
+            }
+
+            $roleName = $locked->roles->first()?->name ?? 'no role';
             $this->activityLog->log(
                 $actor,
                 null,
                 ActivityAction::UPDATE,
-                description: "Updated user #{$locked->getKey()}: {$locked->full_name} ({$locked->username}), role: {$role}",
+                description: "Updated user #{$locked->getKey()}: {$locked->full_name} ({$locked->username}), role: {$roleName}",
             );
 
-            return $locked->load('role:id,role_name');
+            return $locked->load('roles:id,name');
         }, 3);
     }
 
@@ -110,7 +118,9 @@ class UserManagementService
                 throw new DomainException('You cannot delete your own account.');
             }
 
-            $this->ensureAdminRemains($locked, RoleId::EMPLOYEE->value);
+            // Deleting a user also removes their role assignment; protect the
+            // last admin exactly like a demotion would.
+            $this->ensureAdminRemains($locked, null);
 
             $fullName = $locked->full_name;
             $username = $locked->username;
@@ -175,8 +185,8 @@ class UserManagementService
 
         if (array_key_exists('role_id', $values)) {
             $roleId = filter_var($values['role_id'], FILTER_VALIDATE_INT);
-            if ($roleId === false || RoleId::tryFrom($roleId) === null) {
-                throw new InvalidArgumentException('A valid legacy role is required.');
+            if ($roleId === false) {
+                throw new InvalidArgumentException('A valid role is required.');
             }
             $values['role_id'] = $roleId;
         }
@@ -184,11 +194,15 @@ class UserManagementService
         return $values;
     }
 
-    private function ensureRoleExists(int $roleId): void
+    private function resolveRole(int $roleId): Role
     {
-        if (Role::query()->whereKey($roleId)->doesntExist()) {
+        $role = Role::query()->whereKey($roleId)->first();
+
+        if ($role === null) {
             throw new InvalidArgumentException("Role [{$roleId}] does not exist.");
         }
+
+        return $role;
     }
 
     private function ensureUsernameIsAvailable(string $username, ?int $exceptId = null): void
@@ -205,16 +219,22 @@ class UserManagementService
         }
     }
 
-    private function ensureAdminRemains(User $user, int $newRoleId): void
+    /**
+     * Keep at least one Admin account: blocks both demoting and deleting the
+     * last administrator.
+     */
+    private function ensureAdminRemains(User $user, ?Role $newRole): void
     {
-        if (! $user->isAdmin() || $newRoleId === RoleId::ADMIN->value) {
+        $isCurrentlyAdmin = $user->hasRole(RoleName::ADMIN->value);
+        $staysAdmin = $newRole?->name === RoleName::ADMIN->value;
+
+        if (! $isCurrentlyAdmin || $staysAdmin) {
             return;
         }
 
         $adminCount = User::query()
-            ->where('role_id', RoleId::ADMIN->value)
+            ->role(RoleName::ADMIN->value)
             ->lockForUpdate()
-            ->pluck('id')
             ->count();
 
         if ($adminCount <= 1) {
