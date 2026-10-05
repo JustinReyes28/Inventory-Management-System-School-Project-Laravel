@@ -1,4 +1,5 @@
 import { createInertiaApp } from '@inertiajs/react';
+import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 import AppLayout from './Layouts/AppLayout';
 import './bootstrap';
@@ -7,16 +8,20 @@ import '../css/app.css';
 const pages = import.meta.glob('./Pages/**/*.jsx');
 
 createInertiaApp({
-    resolve: (name) => {
-        const loadPage = pages[`./Pages/${name}.jsx`];
-        if (!loadPage) throw new Error(`Inertia page not found: ${name}`);
-        const page = loadPage();
-        if (name === 'Auth/Login') return page;
-        return page.then((module) => ({
-            ...module,
-            layout: ({ children }) => <AppLayout>{children}</AppLayout>,
-        }));
-    },
+    resolve: (name) =>
+        // Lazy page loading through Vite's glob + resolvePageComponent.
+        resolvePageComponent(`./Pages/${name}.jsx`, pages).then((module) => {
+            // Guest screens under Auth/ render their own GuestLayout and must
+            // not inherit the authenticated application navigation.
+            if (name.startsWith('Auth/')) {
+                return module;
+            }
+
+            return {
+                ...module,
+                layout: ({ children }) => <AppLayout>{children}</AppLayout>,
+            };
+        }),
     setup({ el, App, props }) {
         createRoot(el).render(<App {...props} />);
     },

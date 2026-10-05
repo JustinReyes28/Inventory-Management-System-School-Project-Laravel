@@ -2,6 +2,7 @@ export const paths = {
     login: '/login',
     logout: '/logout',
     dashboard: '/dashboard',
+    account: '/account',
     items: '/items',
     categories: '/categories',
     batches: '/batches',

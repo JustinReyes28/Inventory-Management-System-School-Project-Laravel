@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
         $password = env('ADMIN_PASSWORD');
         $admin = User::query()->firstOrNew(['username' => $username]);
         $admin->full_name = 'System Administrator';
+        $admin->email ??= 'admin@example.test';
 
         if (! $admin->exists) {
             if (app()->environment('production') && (! is_string($password) || $password === '')) {

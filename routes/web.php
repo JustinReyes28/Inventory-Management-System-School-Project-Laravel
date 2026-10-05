@@ -1,20 +1,18 @@
 <?php
 
-use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\AccountController;
 use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware('guest')->group(function (): void {
-    Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
-    Route::post('/login', [AuthenticatedSessionController::class, 'store'])
-        ->middleware('throttle:login')
-        ->name('login.store');
-});
-
+/*
+ * Authentication (login, logout, registration, password recovery, profile and
+ * password updates) is owned by Laravel Fortify — see config/fortify.php and
+ * App\Providers\FortifyServiceProvider for the Inertia view wiring.
+ */
 Route::middleware('auth')->group(function (): void {
     Route::redirect('/', '/dashboard')->name('home');
-    Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/account', [AccountController::class, 'show'])->name('account');
 
     /*
      * Modular application routes. Each file registers its named resource

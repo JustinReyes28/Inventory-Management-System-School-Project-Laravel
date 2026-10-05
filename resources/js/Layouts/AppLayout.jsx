@@ -169,6 +169,13 @@ export default function AppLayout({ children }) {
             </nav>
 
             <div className="border-t border-white/10 p-3">
+                <Link
+                    href={paths.account}
+                    className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white"
+                >
+                    <Icon name="key" size={19} />
+                    <span>My account</span>
+                </Link>
                 <button
                     type="button"
                     className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white"

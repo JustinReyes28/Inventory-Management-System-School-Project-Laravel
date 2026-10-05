@@ -69,8 +69,14 @@ class HandleInertiaRequests extends Middleware
                 'message' => fn () => $request->session()->get('message', $request->session()->get('success')),
                 'error' => fn () => $request->session()->get('error'),
             ],
+            // Fortify flashes 'status' after login-adjacent actions (password
+            // reset link sent, profile updated, password updated).
+            'status' => fn () => $request->session()->get('status'),
             'errors' => function () use ($request): array {
-                $errors = $request->session()->get('errors')?->getBag('default')->getMessages() ?? [];
+                // Named validation bags (Fortify profile/password forms) are
+                // selected by Inertia's X-Inertia-Error-Bag header.
+                $bag = $request->header('X-Inertia-Error-Bag') ?: 'default';
+                $errors = $request->session()->get('errors')?->getBag($bag)->getMessages() ?? [];
 
                 if ($request->routeIs('login') && isset($errors['username'])) {
                     $errors['email'] ??= $errors['username'];
