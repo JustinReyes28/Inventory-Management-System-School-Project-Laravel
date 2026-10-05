@@ -2,25 +2,34 @@
 
 namespace App\Models;
 
-use App\Enums\RoleId;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Spatie\Permission\Traits\HasRoles;
 
 /**
  * @property int $id
  * @property string $full_name
  * @property string $username
+ * @property string|null $email
  * @property string $password_hash
- * @property int $role_id
+ *
+ * @property-read \Spatie\Permission\Models\Role|null $role
  */
 class User extends Authenticatable
 {
-    use HasFactory;
+    /**
+     * HasRoles (spatie/laravel-permission) is the single role authority.
+     * Notifiable supports the Fortify password-reset notification; the
+     * inventory `notifications()` relation below intentionally overrides
+     * Notifiable's database-channel relation (mail is the only channel used).
+     *
+     * @use HasFactory<UserFactory>
+     */
+    use HasFactory, HasRoles, Notifiable;
 
-    /** @use HasFactory<UserFactory> */
     protected $table = 'users';
 
     public $timestamps = false;
@@ -29,11 +38,11 @@ class User extends Authenticatable
         'full_name',
         'username',
         'password_hash',
-        'role_id',
     ];
 
     protected $hidden = [
         'password_hash',
+        'remember_token',
     ];
 
     /**
@@ -42,7 +51,6 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'role_id' => 'integer',
             'password_hash' => 'hashed',
             'created_at' => 'datetime',
         ];
@@ -56,24 +64,6 @@ class User extends Authenticatable
         return 'password_hash';
     }
 
-    public function isAdmin(): bool
-    {
-        return (int) $this->role_id === RoleId::ADMIN->value;
-    }
-
-    public function isEmployee(): bool
-    {
-        return (int) $this->role_id === RoleId::EMPLOYEE->value;
-    }
-
-    /**
-     * @return BelongsTo<Role, $this>
-     */
-    public function role(): BelongsTo
-    {
-        return $this->belongsTo(Role::class, 'role_id');
-    }
-
     /**
      * @return HasMany<ActivityLog, $this>
      */
@@ -83,6 +73,8 @@ class User extends Authenticatable
     }
 
     /**
+     * Inventory notifications (not Laravel database notifications).
+     *
      * @return HasMany<UserNotification, $this>
      */
     public function notifications(): HasMany
