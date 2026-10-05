@@ -7,11 +7,13 @@ import Pagination from '../../Components/Pagination';
 import { Badge, Button, Card, PageHeader, SearchField, TableState } from '../../Components/UI';
 import { asArray, firstDefined, formatDate, normalizePagination, relationName, titleCase } from '../../Utils';
 import { paths, resourcePath } from '../../Utils/routes';
+import useAuth from '../../Utils/auth';
 
-const fallbackRoles = [{ id: 1, name: 'admin' }, { id: 2, name: 'employee' }];
+const fallbackRoles = [{ id: 1, name: 'Admin' }, { id: 2, name: 'Employee' }, { id: 3, name: 'User' }];
 
 export default function UsersIndex({ users, roles = [], errors: pageErrors = {} }) {
     const page = usePage();
+    const { can } = useAuth();
     const rows = asArray(users);
     const meta = normalizePagination(users);
     const availableRoles = asArray(roles).length ? asArray(roles) : fallbackRoles;
@@ -79,7 +81,7 @@ export default function UsersIndex({ users, roles = [], errors: pageErrors = {} 
                 eyebrow="Administration"
                 title="Users"
                 description="Manage team identities, usernames, and role-based access. Only administrators can make changes."
-                actions={<Button type="button" onClick={openCreate}><Icon name="plus" size={18} />Add user</Button>}
+                actions={can('create users') && <Button type="button" onClick={openCreate}><Icon name="plus" size={18} />Add user</Button>}
             />
 
             <Card className="overflow-hidden">
@@ -105,7 +107,8 @@ export default function UsersIndex({ users, roles = [], errors: pageErrors = {} 
                                         <td className="whitespace-nowrap text-xs text-slate-500">{formatDate(firstDefined(user.created_at, user.joined_at))}</td>
                                         <td>
                                             <div className="flex justify-end gap-1 no-print">
-                                                <button type="button" className="icon-button" onClick={() => openEdit(user)} aria-label={`Edit ${relationName(user, ['name', 'full_name'], 'user')}`} title="Edit user"><Icon name="edit" size={18} /></button>
+                                                {can('update users') && <button type="button" className="icon-button" onClick={() => openEdit(user)} aria-label={`Edit ${relationName(user, ['name', 'full_name'], 'user')}`} title="Edit user"><Icon name="edit" size={18} /></button>}
+                                                {can('delete users') && (
                                                 <button
                                                     type="button"
                                                     className="icon-button hover:!bg-red-50 hover:!text-red-700 disabled:opacity-40"
@@ -116,6 +119,7 @@ export default function UsersIndex({ users, roles = [], errors: pageErrors = {} 
                                                 >
                                                     <Icon name="trash" size={18} />
                                                 </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>

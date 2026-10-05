@@ -8,25 +8,18 @@ import { notificationsReadAllPath, paths } from '../Utils/routes';
 
 const navigation = [
     { label: 'Overview', href: paths.dashboard, icon: 'dashboard', match: /^\/dashboard\/?$/ },
-    { label: 'Items', href: paths.items, icon: 'box', match: /^\/items(?:\/|$)/ },
-    { label: 'Categories', href: paths.categories, icon: 'layers', match: /^\/categories(?:\/|$)/ },
-    { label: 'Batches', href: paths.batches, icon: 'calendar', match: /^\/batches(?:\/|$)/ },
-    { label: 'Activity logs', href: paths.activityLogs, icon: 'history', match: /^\/activity-logs(?:\/|$)/ },
-    { label: 'Reports', href: paths.reports, icon: 'chart', match: /^\/reports(?:\/|$)/ },
-    { label: 'Notifications', href: paths.notifications, icon: 'bell', match: /^\/notifications(?:\/|$)/ },
-    { label: 'Users', href: paths.users, icon: 'users', match: /^\/users(?:\/|$)/, admin: true },
+    { label: 'Items', href: paths.items, icon: 'box', match: /^\/items(?:\/|$)/, permission: 'view items' },
+    { label: 'Categories', href: paths.categories, icon: 'layers', match: /^\/categories(?:\/|$)/, permission: 'view categories' },
+    { label: 'Batches', href: paths.batches, icon: 'calendar', match: /^\/batches(?:\/|$)/, permission: 'view batches' },
+    { label: 'Activity logs', href: paths.activityLogs, icon: 'history', match: /^\/activity-logs(?:\/|$)/, permission: 'view activity logs' },
+    { label: 'Reports', href: paths.reports, icon: 'chart', match: /^\/reports(?:\/|$)/, permission: 'view reports' },
+    { label: 'Notifications', href: paths.notifications, icon: 'bell', match: /^\/notifications(?:\/|$)/, permission: 'view notifications' },
+    { label: 'Users', href: paths.users, icon: 'users', match: /^\/users(?:\/|$)/, permission: 'view users' },
 ];
 
 function activeTitle(url) {
     const match = navigation.find((item) => item.match.test(url));
     return match?.label || 'Inventory workspace';
-}
-
-function isAdmin(user) {
-    if (!user) return false;
-    if (typeof user.is_admin === 'boolean') return user.is_admin;
-    const role = user.role?.name || user.role_name || user.role || '';
-    return !role || ['admin', 'administrator', 'super admin'].includes(String(role).toLowerCase());
 }
 
 export default function AppLayout({ children }) {
@@ -41,6 +34,9 @@ export default function AppLayout({ children }) {
     const markAllForm = useForm({});
 
     const user = page.props.auth?.user || page.props.user || null;
+    // Spatie permissions shared by HandleInertiaRequests drive UI visibility.
+    const permissions = asArray(page.props.auth?.permissions);
+    const can = (permission) => permissions.includes(permission);
     const pathname = page.url.split('?')[0];
     const title = activeTitle(pathname);
     const source = page.props.notificationSummary
@@ -153,7 +149,7 @@ export default function AppLayout({ children }) {
             <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Primary navigation">
                 <p className="mb-2 px-3 font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Workspace</p>
                 <ul className="space-y-1">
-                    {navigation.filter((item) => !item.admin || isAdmin(user)).map((item) => {
+                    {navigation.filter((item) => !item.permission || can(item.permission)).map((item) => {
                         const active = item.match.test(pathname);
                         return (
                             <li key={item.href}>

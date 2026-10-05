@@ -8,10 +8,12 @@ import useInertiaLoading from '../../Hooks/useInertiaLoading';
 import { Badge, Button, Card, EmptyState, FilterBar, PageHeader, SearchField, StockBadge, TableState } from '../../Components/UI';
 import { asArray, firstDefined, formatCurrency, formatNumber, normalizePagination, numberValue, relationName } from '../../Utils';
 import { paths, resourcePath } from '../../Utils/routes';
+import useAuth from '../../Utils/auth';
 
 const blankItem = { sku: '', name: '', category_id: '', price: '', quantity: '', low_stock_threshold: 10 };
 
 export default function ItemsIndex({ items, categories = [], filters = {}, errors: pageErrors = {} }) {
+    const { can } = useAuth();
     const loading = useInertiaLoading();
     const urlFilters = new URLSearchParams(window.location.search);
     const initialSearch = firstDefined(filters.search, urlFilters.get('search'), '');
@@ -118,7 +120,7 @@ export default function ItemsIndex({ items, categories = [], filters = {}, error
                 eyebrow="Catalog"
                 title="Items"
                 description="Search products, review stock health, and keep item records current."
-                actions={<Button type="button" onClick={openCreate}><Icon name="plus" size={18} />Add item</Button>}
+                actions={can('create items') && <Button type="button" onClick={openCreate}><Icon name="plus" size={18} />Add item</Button>}
             />
 
             <Card className="overflow-hidden">
@@ -156,8 +158,8 @@ export default function ItemsIndex({ items, categories = [], filters = {}, error
                                         <td>{archived ? <Badge tone="slate">Archived</Badge> : <StockBadge quantity={quantity} threshold={threshold} />}</td>
                                         <td>
                                             <div className="flex justify-end gap-1 no-print">
-                                                <button type="button" className="icon-button" onClick={() => openEdit(item)} aria-label={`Edit ${item.name || 'item'}`} title="Edit item"><Icon name="edit" size={18} /></button>
-                                                {!archived && <button type="button" className="icon-button hover:!bg-amber-50 hover:!text-amber-800" onClick={() => setArchiveTarget(item)} aria-label={`Archive ${item.name || 'item'}`} title="Archive item"><Icon name="archive" size={18} /></button>}
+                                                {can('update items') && <button type="button" className="icon-button" onClick={() => openEdit(item)} aria-label={`Edit ${item.name || 'item'}`} title="Edit item"><Icon name="edit" size={18} /></button>}
+                                                {can('update items') && !archived && <button type="button" className="icon-button hover:!bg-amber-50 hover:!text-amber-800" onClick={() => setArchiveTarget(item)} aria-label={`Archive ${item.name || 'item'}`} title="Archive item"><Icon name="archive" size={18} /></button>}
                                             </div>
                                         </td>
                                     </tr>

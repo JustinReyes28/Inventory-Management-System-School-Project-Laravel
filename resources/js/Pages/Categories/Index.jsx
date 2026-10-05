@@ -7,10 +7,12 @@ import Pagination from '../../Components/Pagination';
 import { Button, Card, EmptyState, PageHeader, SearchField, TableState } from '../../Components/UI';
 import { asArray, firstDefined, formatNumber, normalizePagination, relationName } from '../../Utils';
 import { paths, resourcePath } from '../../Utils/routes';
+import useAuth from '../../Utils/auth';
 
 const blankCategory = { category_name: '' };
 
 export default function CategoriesIndex({ categories, errors: pageErrors = {} }) {
+    const { can } = useAuth();
     const rows = asArray(categories);
     const meta = normalizePagination(categories);
     const [search, setSearch] = useState('');
@@ -77,7 +79,7 @@ export default function CategoriesIndex({ categories, errors: pageErrors = {} })
                 eyebrow="Catalog structure"
                 title="Categories"
                 description="Keep products organized into clear, useful groups."
-                actions={<Button type="button" onClick={openCreate}><Icon name="plus" size={18} />Add category</Button>}
+                actions={can('create categories') && <Button type="button" onClick={openCreate}><Icon name="plus" size={18} />Add category</Button>}
             />
 
             <Card className="overflow-hidden">
@@ -96,8 +98,8 @@ export default function CategoriesIndex({ categories, errors: pageErrors = {} })
                                     <td className="text-right"><span className="font-mono text-xs font-semibold text-slate-700">{formatNumber(firstDefined(category.product_count, category.products_count, category.items_count, 0))}</span></td>
                                     <td>
                                         <div className="flex justify-end gap-1 no-print">
-                                            <button type="button" className="icon-button" onClick={() => openEdit(category)} aria-label={`Edit ${relationName(category, ['name', 'category_name'], 'category')}`} title="Edit category"><Icon name="edit" size={18} /></button>
-                                            <button type="button" className="icon-button hover:!bg-red-50 hover:!text-red-700" onClick={() => setDeleteTarget(category)} aria-label={`Delete ${relationName(category, ['name', 'category_name'], 'category')}`} title="Delete category"><Icon name="trash" size={18} /></button>
+                                            {can('update categories') && <button type="button" className="icon-button" onClick={() => openEdit(category)} aria-label={`Edit ${relationName(category, ['name', 'category_name'], 'category')}`} title="Edit category"><Icon name="edit" size={18} /></button>}
+                                            {can('delete categories') && <button type="button" className="icon-button hover:!bg-red-50 hover:!text-red-700" onClick={() => setDeleteTarget(category)} aria-label={`Delete ${relationName(category, ['name', 'category_name'], 'category')}`} title="Delete category"><Icon name="trash" size={18} /></button>}
                                         </div>
                                     </td>
                                 </tr>

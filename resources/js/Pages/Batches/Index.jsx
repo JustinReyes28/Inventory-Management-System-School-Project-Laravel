@@ -8,6 +8,7 @@ import useInertiaLoading from '../../Hooks/useInertiaLoading';
 import { Badge, Button, Card, FilterBar, PageHeader, SearchField, TableState } from '../../Components/UI';
 import { asArray, expiryDays, firstDefined, formatDate, formatNumber, normalizePagination, numberValue, relationName } from '../../Utils';
 import { paths, resourcePath } from '../../Utils/routes';
+import useAuth from '../../Utils/auth';
 
 const blankBatch = { item_id: '', batch_number: '', quantity: '', expiry_date: '' };
 const statusTabs = [
@@ -26,6 +27,7 @@ function batchStatus(batch) {
 }
 
 export default function BatchesIndex({ batches, items = [], filters = {}, errors: pageErrors = {} }) {
+    const { can } = useAuth();
     const loading = useInertiaLoading();
     const urlFilters = new URLSearchParams(window.location.search);
     const [search, setSearch] = useState(firstDefined(filters.search, urlFilters.get('search'), ''));
@@ -110,7 +112,7 @@ export default function BatchesIndex({ batches, items = [], filters = {}, errors
                 eyebrow="Lot tracking"
                 title="Batches"
                 description="Track quantities and expiry dates for every lot in stock."
-                actions={<Button type="button" onClick={openCreate}><Icon name="plus" size={18} />Add batch</Button>}
+                actions={can('create batches') && <Button type="button" onClick={openCreate}><Icon name="plus" size={18} />Add batch</Button>}
             />
 
             <Card className="overflow-hidden">
@@ -158,8 +160,8 @@ export default function BatchesIndex({ batches, items = [], filters = {}, errors
                                         <td className="whitespace-nowrap text-xs text-slate-500">{formatDate(firstDefined(batch.created_at, batch.createdAt))}</td>
                                         <td>
                                             <div className="flex justify-end gap-1 no-print">
-                                                <button type="button" className="icon-button" onClick={() => openEdit(batch)} aria-label={`Edit batch ${batch.batch_number || batch.id}`} title="Edit batch"><Icon name="edit" size={18} /></button>
-                                                <button type="button" className="icon-button hover:!bg-red-50 hover:!text-red-700" onClick={() => setDeleteTarget(batch)} aria-label={`Delete batch ${batch.batch_number || batch.id}`} title="Delete batch"><Icon name="trash" size={18} /></button>
+                                                {can('update batches') && <button type="button" className="icon-button" onClick={() => openEdit(batch)} aria-label={`Edit batch ${batch.batch_number || batch.id}`} title="Edit batch"><Icon name="edit" size={18} /></button>}
+                                                {can('delete batches') && <button type="button" className="icon-button hover:!bg-red-50 hover:!text-red-700" onClick={() => setDeleteTarget(batch)} aria-label={`Delete batch ${batch.batch_number || batch.id}`} title="Delete batch"><Icon name="trash" size={18} /></button>}
                                             </div>
                                         </td>
                                     </tr>
